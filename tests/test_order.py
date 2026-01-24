@@ -26,39 +26,45 @@ class TestETradeOrder(unittest.TestCase):
             expected, order.option_symbol("PLTR", order.PUT, "2022-02-18", "23.0")
         )
 
-    @patch("pyetrade.order.OAuth1Session")
-    def test_list_orders(self, MockOAuthSession):
-        """test_place_equity_order(MockOAuthSession) -> None
-        param: MockOAuthSession
+    @patch("pyetrade.order.OAuth1Client")
+    def test_list_orders(self, MockOAuthClient):
+        """test_place_equity_order(MockOAuthClient) -> None
+        param: MockOAuthClient
         type: mock.MagicMock
-        description: MagicMock of OAuth1Session"""
+        description: MagicMock of OAuth1Client"""
         # Set Mock returns
-        MockOAuthSession().get().json.return_value = {"accountId": "12345"}
-        MockOAuthSession().get().text = r"<xml> returns </xml>"
+        MockOAuthClient.return_value.get.return_value.json.return_value = {
+            "accountId": "12345"
+        }
+        MockOAuthClient.return_value.get.return_value.text = r"<xml> returns </xml>"
+        MockOAuthClient.return_value.get.return_value.status_code = 200
+
         orders = order.ETradeOrder(
             "abc123", "xyz123", "abctoken", "xyzsecret", dev=False
         )
 
         # Test Dev buy order equity
         self.assertEqual(orders.list_orders("12345"), {"accountId": "12345"})
-        self.assertTrue(MockOAuthSession().get().json.called)
-        self.assertTrue(MockOAuthSession().get.called)
+        self.assertTrue(MockOAuthClient.return_value.get.return_value.json.called)
+        self.assertTrue(MockOAuthClient.return_value.get.called)
 
         # Test Prod buy order equity
         self.assertEqual(orders.list_orders("12345"), {"accountId": "12345"})
-        self.assertTrue(MockOAuthSession().get().json.called)
-        self.assertTrue(MockOAuthSession().get.called)
+        self.assertTrue(MockOAuthClient.return_value.get.return_value.json.called)
+        self.assertTrue(MockOAuthClient.return_value.get.called)
 
         self.assertTrue(
             isinstance(orders.list_orders("12345", resp_format="xml"), dict)
         )
-        self.assertTrue(MockOAuthSession().get().json.called)
-        self.assertTrue(MockOAuthSession().get.called)
+        self.assertTrue(MockOAuthClient.return_value.get.called)
 
-    @patch("pyetrade.order.OAuth1Session")
-    def test_list_order_details(self, MockOAuthSession):
-        MockOAuthSession().get().json.return_value = {"accountId": "12345"}
-        MockOAuthSession().get().text = r"<xml> returns </xml>"
+    @patch("pyetrade.order.OAuth1Client")
+    def test_list_order_details(self, MockOAuthClient):
+        MockOAuthClient.return_value.get.return_value.json.return_value = {
+            "accountId": "12345"
+        }
+        MockOAuthClient.return_value.get.return_value.text = r"<xml> returns </xml>"
+        MockOAuthClient.return_value.get.return_value.status_code = 200
 
         orders = order.ETradeOrder(
             "abc123", "xyz123", "abctoken", "xyzsecret", dev=False
@@ -67,8 +73,8 @@ class TestETradeOrder(unittest.TestCase):
         self.assertTrue(
             isinstance(orders.list_order_details("12345", 123, "json"), dict)
         )
-        self.assertTrue(MockOAuthSession().get().json.called)
-        self.assertTrue(MockOAuthSession().get.called)
+        self.assertTrue(MockOAuthClient.return_value.get.return_value.json.called)
+        self.assertTrue(MockOAuthClient.return_value.get.called)
 
     def test_find_option_orders(self):
         orders = order.ETradeOrder(
@@ -109,16 +115,17 @@ class TestETradeOrder(unittest.TestCase):
 
         self.assertTrue(isinstance(result, list))
 
-    # Mock out OAuth1Session
-    @patch("pyetrade.order.OAuth1Session")
-    def test_place_equity_order(self, MockOAuthSession):
-        """test_place_equity_order(MockOAuthSession) -> None
-        param: MockOAuthSession
+    # Mock out OAuth1Client
+    @patch("pyetrade.order.OAuth1Client")
+    def test_place_equity_order(self, MockOAuthClient):
+        """test_place_equity_order(MockOAuthClient) -> None
+        param: MockOAuthClient
         type: mock.MagicMock
-        description: MagicMock of OAuth1Session"""
+        description: MagicMock of OAuth1Client"""
 
         # Set Mock returns
-        MockOAuthSession().post().text = r"<PreviewOrderResponse><PreviewIds><previewId>321</previewId></PreviewIds></PreviewOrderResponse>"  # noqa: E501
+        MockOAuthClient.return_value.post.return_value.text = r"<PreviewOrderResponse><PreviewIds><previewId>321</previewId></PreviewIds></PreviewOrderResponse>"  # noqa: E501
+        MockOAuthClient.return_value.post.return_value.status_code = 200
         orders = order.ETradeOrder(
             "abc123", "xyz123", "abctoken", "xyzsecret", dev=False
         )
@@ -136,8 +143,8 @@ class TestETradeOrder(unittest.TestCase):
 
         # Test xml buy order equity
         self.assertTrue(isinstance(result, dict))
-        # self.assertTrue(MockOAuthSession().post().json.called)
-        self.assertTrue(MockOAuthSession().post.called)
+        # self.assertTrue(MockOAuthClient().post().json.called)
+        self.assertTrue(MockOAuthClient.return_value.post.called)
 
         # Test OrderedDict buy order equity
         self.assertEqual(
@@ -153,12 +160,12 @@ class TestETradeOrder(unittest.TestCase):
             )["PreviewOrderResponse"]["PreviewIds"]["previewId"],
             "321",
         )
-        self.assertTrue(MockOAuthSession().post.called)
+        self.assertTrue(MockOAuthClient.return_value.post.called)
 
         # Test json buy order equity
         ret_val = {"PreviewOrderResponse": {"PreviewIds": {"previewId": "321"}}}
 
-        MockOAuthSession().post().json.return_value = ret_val
+        MockOAuthClient.return_value.post.return_value.json.return_value = ret_val
         self.assertEqual(
             orders.place_equity_order(
                 accountIdKey="12345",
@@ -172,8 +179,8 @@ class TestETradeOrder(unittest.TestCase):
             ),
             ret_val,
         )
-        # self.assertTrue(MockOAuthSession().post().json.called)
-        self.assertTrue(MockOAuthSession().post.called)
+        # self.assertTrue(MockOAuthClient().post().json.called)
+        self.assertTrue(MockOAuthClient.return_value.post.called)
 
         # Test payload: BUY MARKET
         payload = orders.build_order_payload(
@@ -279,10 +286,10 @@ class TestETradeOrder(unittest.TestCase):
                 )
 
     def test_place_equity_order_exception(self):
-        """test_place_equity_order_exception(MockOAuthSession) -> None
-        param: MockOAuthSession
+        """test_place_equity_order_exception(MockOAuthClient) -> None
+        param: MockOAuthClient
         type: mock.MagicMock
-        description: MagicMock of OAuth1Session"""
+        description: MagicMock of OAuth1Client"""
         orders = order.ETradeOrder(
             "abc123", "xyz123", "abctoken", "xyzsecret", dev=False
         )
@@ -332,14 +339,18 @@ class TestETradeOrder(unittest.TestCase):
                 marketSession="REGULAR",
             )
 
-    @patch("pyetrade.order.OAuth1Session")
-    def test_cancel_order(self, MockOAuthSession):
-        """test_cancel_order(MockOAuthSession) -> None
-        param: MockOAuthSession
+    @patch("pyetrade.order.OAuth1Client")
+    def test_cancel_order(self, MockOAuthClient):
+        """test_cancel_order(MockOAuthClient) -> None
+        param: MockOAuthClient
         type: mock.MagicMock
-        description: MagicMock of OAuth1Session"""
-        MockOAuthSession().put().json.return_value = {"accountIdKey": "12345"}
-        MockOAuthSession().put().text = r"<xml> returns </xml>"
+        description: MagicMock of OAuth1Client"""
+        MockOAuthClient.return_value.put.return_value.json.return_value = {
+            "accountIdKey": "12345"
+        }
+        MockOAuthClient.return_value.put.return_value.text = r"<xml> returns </xml>"
+        MockOAuthClient.return_value.put.return_value.status_code = 200
+
         orders = order.ETradeOrder(
             "abc123", "xyz123", "abctoken", "xyzsecret", dev=False
         )
@@ -348,13 +359,12 @@ class TestETradeOrder(unittest.TestCase):
             orders.cancel_order("12345", 42, resp_format="json"),
             {"accountIdKey": "12345"},
         )
-        MockOAuthSession().put.assert_called_with(
+        MockOAuthClient.return_value.put.assert_called_with(
             "https://api.etrade.com/v1/accounts" "/12345/orders/cancel",
             json={"CancelOrderRequest": {"orderId": 42}},
-            timeout=30,
         )
-        self.assertTrue(MockOAuthSession().put().json.called)
-        self.assertTrue(MockOAuthSession().put.called)
+        self.assertTrue(MockOAuthClient.return_value.put.return_value.json.called)
+        self.assertTrue(MockOAuthClient.return_value.put.called)
         self.assertTrue(
             isinstance(orders.cancel_order("12345", 42, resp_format="xml"), dict)
         )

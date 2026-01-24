@@ -5,8 +5,8 @@
 
 """
 import logging
-
-from requests_oauthlib import OAuth1Session
+import httpx
+from authlib.integrations.httpx_client import OAuth1Client, AsyncOAuth1Client
 
 # Set up logging
 LOGGER = logging.getLogger(__name__)
@@ -48,24 +48,28 @@ class ETradeOAuth(object):
         """
 
         # Set up session
-        self.session = OAuth1Session(
+        self.session = OAuth1Client(
             self.consumer_key,
             self.consumer_secret,
-            callback_uri=self.callback_url,
-            signature_type="AUTH_HEADER",
+            redirect_uri=self.callback_url,
+            signature_method="HMAC-SHA1",
         )
         # get request token
         self.session.fetch_request_token(self.req_token_url)
         # get authorization url
         # etrade format: url?key&token
-        authorization_url = self.session.authorization_url(self.auth_token_url)
-        akey = self.session.parse_authorization_response(authorization_url)
+        authorization_url = self.session.create_authorization_url(self.auth_token_url)
         # store oauth_token
-        self.resource_owner_key = akey["oauth_token"]
+        # self.resource_owner_key = self.session.token["oauth_token"]
+        self.resource_owner_key = self.session.token["oauth_token"]
+        
+        # Manually constructing the URL as per previous implementation to ensure compatibility
+        # though create_authorization_url usually handles this. E*Trade might have specific params?
+        # The previous implementation did:
         formated_auth_url = "%s?key=%s&token=%s" % (
             self.auth_token_url,
             self.consumer_key,
-            akey["oauth_token"],
+            self.resource_owner_key,
         )
         LOGGER.debug(formated_auth_url)
 
@@ -81,10 +85,9 @@ class ETradeOAuth(object):
         :EtradeRef: https://apisb.etrade.com/docs/api/authorization/get_access_token.html
         """
 
-        # Set verifier
-        self.session._client.client.verifier = verifier
         # Get access token
-        self.access_token = self.session.fetch_access_token(self.access_token_url)
+        self.session.fetch_access_token(self.access_token_url, verifier=verifier)
+        self.access_token = self.session.token
         LOGGER.debug(self.access_token)
 
         return self.access_token
@@ -119,12 +122,12 @@ class ETradeAccessManager(object):
         self.revoke_access_token_url = (
             r"https://api.etrade.com/oauth/revoke_access_token"
         )
-        self.session = OAuth1Session(
+        self.session = OAuth1Client(
             self.client_key,
             self.client_secret,
-            self.resource_owner_key,
-            self.resource_owner_secret,
-            signature_type="AUTH_HEADER",
+            token=self.resource_owner_key,
+            token_secret=self.resource_owner_secret,
+            signature_method="HMAC-SHA1",
         )
 
     def renew_access_token(self) -> bool:
