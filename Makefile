@@ -1,17 +1,24 @@
 init:
-	pip install -r requirements.txt
+	uv sync
+
 devel:
-	pip install -r requirements_dev.txt
-	pre-commit install --hook-type pre-commit --hook-type pre-push --install-hooks -t post-checkout -t post-merge
+	uv sync --all-extras
+	uv run pre-commit install --hook-type pre-commit --hook-type pre-push --install-hooks -t post-checkout -t post-merge
+
 test:
-	tox
+	uv run pytest tests -v
+
 analysis: # Lint, format, import optimizer, etc.
-	poetry run pre-commit run --all-files
+	uv run pre-commit run --all-files
+
 install:
-	pip install --upgrade .
+	uv pip install --upgrade .
+
 dist:
-	python setup.py sdist
+	uv build
+
 clean:
 	$(RM) -fr .tox/
+	$(RM) -fr build/ dist/ *.egg-info
 	find . -iname *.pyc -exec rm -f {} +
-	pip uninstall -y pyetrade
+	uv pip uninstall -y pyetrade
