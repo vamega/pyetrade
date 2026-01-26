@@ -6,7 +6,7 @@
 """
 import logging
 import httpx
-from authlib.integrations.httpx_client import OAuth1Client, AsyncOAuth1Client
+from authlib.integrations.httpx_client import OAuth1Client
 
 # Set up logging
 LOGGER = logging.getLogger(__name__)

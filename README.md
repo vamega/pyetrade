@@ -6,6 +6,8 @@
 [![Build Status](https://github.com/jessecooper/pyetrade/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/jessecooper/pyetrade/actions/workflows/build.yml/badge.svg?branch=master)
 [![codecov](https://codecov.io/gh/jessecooper/pyetrade/branch/master/graph/badge.svg)](https://codecov.io/gh/jessecooper/pyetrade)
 
+Python E-Trade API Wrapper with support for both **synchronous** and **asynchronous** operations using `httpx` and `authlib`.
+
 ## Completed
 
 * Authorization API (OAuth)
@@ -54,7 +56,14 @@
 ```bash
 pip install pyetrade
 ```
-OR
+
+**Dependencies:**
+- `httpx` - Modern HTTP client with sync and async support
+- `authlib` - OAuth 1.0a authentication
+- `xmltodict` - XML parsing
+- `jxmlease` - XML generation (for orders)
+
+OR install from source:
 ```bash
 git clone https://github.com/jessecooper/pyetrade.git
 cd pyetrade
@@ -63,6 +72,8 @@ sudo make install
 ```
 
 ## Example Usage
+
+### Synchronous API
 
 To create the OAuth tokens:
 
@@ -81,7 +92,7 @@ tokens = oauth.get_access_token(verifier_code)
 print(tokens)
 ```
 
-And then on the example code:
+Using the API:
 
 ```python
 import pyetrade
@@ -100,6 +111,47 @@ accounts = pyetrade.ETradeAccounts(
 
 print(accounts.list_accounts())
 ```
+
+### Asynchronous API
+
+For async operations, import from `pyetrade.async_api`:
+
+```python
+import asyncio
+from pyetrade.async_api.authorization import ETradeOAuth
+from pyetrade.async_api.accounts import ETradeAccounts
+
+async def main():
+    consumer_key = "<CONSUMER_KEY>"
+    consumer_secret = "<SECRET_KEY>"
+    
+    # OAuth flow
+    oauth = ETradeOAuth(consumer_key, consumer_secret)
+    print(await oauth.get_request_token())  # Use the printed URL
+    
+    verifier_code = input("Enter verification code: ")
+    tokens = await oauth.get_access_token(verifier_code)
+    
+    # Use the API
+    accounts = ETradeAccounts(
+        consumer_key,
+        consumer_secret,
+        tokens['oauth_token'],
+        tokens['oauth_token_secret']
+    )
+    
+    account_list = await accounts.list_accounts()
+    print(account_list)
+
+asyncio.run(main())
+```
+
+**Available async modules:**
+- `pyetrade.async_api.authorization` - OAuth and access management
+- `pyetrade.async_api.accounts` - Account information and transactions
+- `pyetrade.async_api.market` - Market data and quotes
+- `pyetrade.async_api.order` - Order management
+- `pyetrade.async_api.alerts` - Alert management
 
 ## Documentation
 

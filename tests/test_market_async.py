@@ -1,17 +1,16 @@
-
 import pytest
 import respx
 from httpx import Response
-from pyetrade.market import ETradeMarketAsync
+from pyetrade.async_api.market import ETradeMarket
 
 import datetime
 
 @pytest.mark.asyncio
-class TestETradeMarketAsync:
+class TestETradeMarket:
     
     @respx.mock
     async def test_look_up_product(self):
-        market = ETradeMarketAsync("key", "secret", "token", "token_secret", dev=True)
+        market = ETradeMarket("key", "secret", "token", "token_secret", dev=True)
         response_data = {"LookupResponse": {"Data": [{"symbol": "MMM"}]}}
         
         # Test look_up_product with json format
@@ -24,7 +23,7 @@ class TestETradeMarketAsync:
 
     @respx.mock
     async def test_get_quote(self):
-        market = ETradeMarketAsync("key", "secret", "token", "token_secret", dev=True)
+        market = ETradeMarket("key", "secret", "token", "token_secret", dev=True)
         response_data = {"QuoteResponse": {"QuoteData": [{"Product": {"symbol": "AAPL"}}]}}
         
         # Note: get_quote builds URL like quote/AAPL,GOOG.json
@@ -36,7 +35,7 @@ class TestETradeMarketAsync:
 
     @respx.mock
     async def test_get_option_chains(self):
-        market = ETradeMarketAsync("key", "secret", "token", "token_secret", dev=True)
+        market = ETradeMarket("key", "secret", "token", "token_secret", dev=True)
         response_data = {"OptionChainResponse": {}}
         
         expiry_date = datetime.date(2023, 1, 1)

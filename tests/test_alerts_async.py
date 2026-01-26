@@ -2,14 +2,14 @@
 import pytest
 import respx
 from httpx import Response
-from pyetrade.alerts import ETradeAlertsAsync
+from pyetrade.async_api.alerts import ETradeAlerts
 
 @pytest.mark.asyncio
-class TestETradeAlertsAsync:
+class TestETradeAlerts:
     
     @respx.mock
     async def test_list_alerts(self):
-        alerts = ETradeAlertsAsync("key", "secret", "token", "token_secret", dev=True)
+        alerts = ETradeAlerts("key", "secret", "token", "token_secret", dev=True)
         response_data = {"AlertsResponse": {"Alert": []}}
         
         url = "https://apisb.etrade.com/v1/user/alerts.json"
@@ -21,7 +21,7 @@ class TestETradeAlertsAsync:
 
     @respx.mock
     async def test_list_alert_details(self):
-        alerts = ETradeAlertsAsync("key", "secret", "token", "token_secret", dev=True)
+        alerts = ETradeAlerts("key", "secret", "token", "token_secret", dev=True)
         alert_id = 123
         response_data = {"AlertDetailsResponse": {"id": 123}}
         
@@ -34,7 +34,7 @@ class TestETradeAlertsAsync:
         
     @respx.mock
     async def test_delete_alert(self):
-        alerts = ETradeAlertsAsync("key", "secret", "token", "token_secret", dev=True)
+        alerts = ETradeAlerts("key", "secret", "token", "token_secret", dev=True)
         alert_id = 123
         response_data = {"DeleteAlertResponse": {"id": 123}}
         

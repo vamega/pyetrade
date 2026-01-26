@@ -1,0 +1,155 @@
+import logging
+import httpx
+from authlib.integrations.httpx_client import AsyncOAuth1Client
+
+# Set up logging
+LOGGER = logging.getLogger(__name__)
+
+
+class ETradeOAuth(object):
+    """:description: Performs authorization for OAuth 1.0a (Async)
+
+    :param consumer_key: Client key provided by Etrade
+    :type consumer_key: str, required
+    :param consumer_secret: Client secret provided by Etrade
+    :type consumer_secret: str, required
+    :param callback_url: Callback URL passed to OAuth mod, defaults to "oob"
+    :type callback_url: str, optional
+    :EtradeRef: https://apisb.etrade.com/docs/api/authorization/request_token.html
+    """
+
+    def __init__(
+        self, consumer_key: str, consumer_secret: str, callback_url: str = "oob"
+    ):
+        self.consumer_key = consumer_key
+        self.consumer_secret = consumer_secret
+        self.base_url_prod = r"https://api.etrade.com"
+        self.base_url_dev = r"https://apisb.etrade.com"
+        self.req_token_url = r"https://api.etrade.com/oauth/request_token"
+        self.auth_token_url = r"https://us.etrade.com/e/t/etws/authorize"
+        self.access_token_url = r"https://api.etrade.com/oauth/access_token"
+        self.callback_url = callback_url
+        self.access_token = None
+        self.resource_owner_key = None
+
+    async def get_request_token(self) -> str:
+        """:description: Obtains the token URL from Etrade.
+
+        :param None: Takes no parameters
+        :return: Formatted Authorization URL (Access this to obtain taken)
+        :rtype: str
+        :EtradeRef: https://apisb.etrade.com/docs/api/authorization/request_token.html
+        """
+
+        # Set up session
+        self.session = AsyncOAuth1Client(
+            self.consumer_key,
+            self.consumer_secret,
+            redirect_uri=self.callback_url,
+            signature_method="HMAC-SHA1",
+        )
+        # get request token
+        await self.session.fetch_request_token(self.req_token_url)
+        # get authorization url
+        # etrade format: url?key&token
+        # create_authorization_url is usually not async as it builds local string, but check authlib docs. It's likely sync.
+        # Assuming sync for create_authorization_url.
+        authorization_url = self.session.create_authorization_url(self.auth_token_url)
+        # store oauth_token
+        self.resource_owner_key = self.session.token["oauth_token"]
+        
+        formated_auth_url = "%s?key=%s&token=%s" % (
+            self.auth_token_url,
+            self.consumer_key,
+            self.resource_owner_key,
+        )
+        LOGGER.debug(formated_auth_url)
+
+        return formated_auth_url
+
+    async def get_access_token(self, verifier: str) -> dict:
+        """:description: Obtains access token. Requires token URL from :class:`get_request_token`
+
+        :param verifier: OAuth Verification Code from Etrade
+        :type verifier: str, required
+        :return: OAuth access tokens
+        :rtype: dict
+        :EtradeRef: https://apisb.etrade.com/docs/api/authorization/get_access_token.html
+        """
+
+        # Get access token
+        await self.session.fetch_access_token(self.access_token_url, verifier=verifier)
+        self.access_token = self.session.token
+        LOGGER.debug(self.access_token)
+
+        return self.access_token
+
+
+class ETradeAccessManager(object):
+    """:description: Renews and revokes ETrade OAuth access tokens (Async)
+
+    :param client_key: Client key provided by Etrade
+    :type client_key: str, required
+    :param client_secret: Client secret provided by Etrade
+    :type client_secret: str, required
+    :param resource_owner_key: Resource key from :class:`ETradeOAuth`
+    :type resource_owner_key: str, required
+    :param resource_owner_secret: Resource secret from :class:`ETradeOAuth`
+    :type resource_owner_secret: str, required
+    :EtradeRef: https://apisb.etrade.com/docs/api/authorization/renew_access_token.html
+    """
+
+    def __init__(
+        self,
+        client_key: str,
+        client_secret: str,
+        resource_owner_key: str,
+        resource_owner_secret: str,
+    ):
+        self.client_key = client_key
+        self.client_secret = client_secret
+        self.resource_owner_key = resource_owner_key
+        self.resource_owner_secret = resource_owner_secret
+        self.renew_access_token_url = r"https://api.etrade.com/oauth/renew_access_token"
+        self.revoke_access_token_url = (
+            r"https://api.etrade.com/oauth/revoke_access_token"
+        )
+        self.session = AsyncOAuth1Client(
+            self.client_key,
+            self.client_secret,
+            token=self.resource_owner_key,
+            token_secret=self.resource_owner_secret,
+            signature_method="HMAC-SHA1",
+        )
+
+    async def renew_access_token(self) -> bool:
+        """:description: Renews access tokens obtained from :class:`ETradeOAuth`
+
+        :param None: Takes no parameters
+        :return: Success or failure
+        :rtype: bool (True or False)
+        :EtradeRef: https://apisb.etrade.com/docs/api/authorization/renew_access_token.html
+        """
+
+        resp = await self.session.get(self.renew_access_token_url)
+        resp.raise_for_status()
+
+        LOGGER.debug(resp.text)
+
+        return True
+
+    async def revoke_access_token(self) -> bool:
+        """:description: Revokes access tokens obtained from :class:`ETradeOAuth`
+
+        :param None: Takes no parameters
+        :return: Success or failure
+        :rtype: bool (True or False)
+        :EtradeRef: https://apisb.etrade.com/docs/api/authorization/revoke_access_token.html
+        """
+
+        resp = await self.session.get(self.revoke_access_token_url)
+        resp.raise_for_status()
+
+        LOGGER.debug(resp.text)
+
+        return True

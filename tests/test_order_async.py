@@ -2,14 +2,14 @@
 import pytest
 import respx
 from httpx import Response
-from pyetrade.order import ETradeOrderAsync
+from pyetrade.async_api.order import ETradeOrder
 
 @pytest.mark.asyncio
-class TestETradeOrderAsync:
+class TestETradeOrder:
     
     @respx.mock
     async def test_list_orders(self):
-        orders = ETradeOrderAsync("key", "secret", "token", "token_secret", dev=True)
+        orders = ETradeOrder("key", "secret", "token", "token_secret", dev=True)
         account_id_key = "123456"
         response_data = {"OrdersResponse": {"Order": []}}
         
@@ -24,7 +24,7 @@ class TestETradeOrderAsync:
 
     @respx.mock
     async def test_preview_equity_order(self):
-        orders = ETradeOrderAsync("key", "secret", "token", "token_secret", dev=True)
+        orders = ETradeOrder("key", "secret", "token", "token_secret", dev=True)
         account_id_key = "123456"
         
         response_data = {"PreviewOrderResponse": {"PreviewIds": {"previewId": "123"}}}
@@ -56,7 +56,7 @@ class TestETradeOrderAsync:
 
     @respx.mock
     async def test_place_equity_order(self):
-        orders = ETradeOrderAsync("key", "secret", "token", "token_secret", dev=True)
+        orders = ETradeOrder("key", "secret", "token", "token_secret", dev=True)
         account_id_key = "123456"
         
         # We need to mock preview first because place_equity_order calls preview if previewId is missing.
@@ -83,7 +83,7 @@ class TestETradeOrderAsync:
 
     @respx.mock
     async def test_cancel_order(self):
-        orders = ETradeOrderAsync("key", "secret", "token", "token_secret", dev=True)
+        orders = ETradeOrder("key", "secret", "token", "token_secret", dev=True)
         account_id_key = "123456"
         order_num = 123
         

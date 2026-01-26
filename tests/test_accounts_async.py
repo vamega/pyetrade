@@ -2,10 +2,10 @@
 import pytest
 import respx
 from httpx import Response
-from pyetrade.accounts import ETradeAccountsAsync
+from pyetrade.async_api.accounts import ETradeAccounts
 
 @pytest.mark.asyncio
-class TestETradeAccountsAsync:
+class TestETradeAccounts:
     
     @respx.mock
     async def test_list_accounts(self):
@@ -14,7 +14,7 @@ class TestETradeAccountsAsync:
         resource_owner_key = "sandbox_resource_key"
         resource_owner_secret = "sandbox_resource_secret"
         
-        accounts = ETradeAccountsAsync(
+        accounts = ETradeAccounts(
             client_key, 
             client_secret, 
             resource_owner_key, 
@@ -33,7 +33,7 @@ class TestETradeAccountsAsync:
         
     @respx.mock
     async def test_get_account_balance(self):
-        accounts = ETradeAccountsAsync(
+        accounts = ETradeAccounts(
             "key", "secret", "token", "token_secret", dev=True
         )
         account_id_key = "123456"
@@ -59,7 +59,7 @@ class TestETradeAccountsAsync:
 
     @respx.mock
     async def test_list_transactions(self):
-        accounts = ETradeAccountsAsync(
+        accounts = ETradeAccounts(
             "key", "secret", "token", "token_secret", dev=True
         )
         account_id_key = "123456"

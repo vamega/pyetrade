@@ -1,12 +1,11 @@
 import logging
-import asyncio
 from datetime import datetime
 from typing import Union, Dict, Any, Optional, List
 
 import dateutil.parser
 import xmltodict
 from jxmlease import emit_xml
-from authlib.integrations.httpx_client import OAuth1Client, AsyncOAuth1Client
+from authlib.integrations.httpx_client import OAuth1Client
 import httpx
 
 LOGGER = logging.getLogger(__name__)
@@ -481,130 +480,3 @@ class ETradeOrder(object):
         payload = {"CancelOrderRequest": {"orderId": order_num}}
 
         return self.perform_request(self.session.put, api_url, payload, resp_format)
-
-class ETradeOrderAsync(object):
-    """:description: Object to perform Orders Asynchronously"""
-
-    def __init__(
-        self,
-        client_key: str,
-        client_secret: str,
-        resource_owner_key: str,
-        resource_owner_secret: str,
-        dev: bool = True,
-        timeout: int = 30,
-    ):
-        self.dev_environment = dev
-        self.base_url = f'https://{"apisb" if dev else "api"}.etrade.com/v1/accounts'
-        self.timeout = timeout
-        self.session = AsyncOAuth1Client(
-            client_key,
-            client_secret,
-            token=resource_owner_key,
-            token_secret=resource_owner_secret,
-            signature_method="HMAC-SHA1",
-            timeout=timeout,
-        )
-
-    async def list_orders(
-        self,
-        account_id_key: str,
-        marker: str = None,
-        count: int = 25,
-        status: str = None,
-        from_date: datetime = None,
-        to_date: datetime = None,
-        symbols: list[str] = None,
-        security_type: str = None,
-        transaction_type: str = None,
-        market_session: str = "REGULAR",
-        resp_format: str = "json",
-    ) -> dict:
-        if symbols and len(symbols) >= 26:
-            LOGGER.warning(
-                "list_orders asked for %d requests; only first 25 returned"
-                % len(symbols)
-            )
-
-        api_url = f"{self.base_url}/{account_id_key}/orders{'.json' if resp_format == 'json' else ''}"
-        LOGGER.debug(api_url)
-
-        if count >= 101:
-            LOGGER.debug(
-                f"Count {count} is greater than the max allowable value (100), using 100."
-            )
-            count = 100
-
-        payload = {
-            "marker": marker,
-            "count": count,
-            "status": status,
-            "fromDate": from_date.date().strftime("%m%d%Y") if from_date else None,
-            "toDate": to_date.date().strftime("%m%d%Y") if to_date else None,
-            "symbol": ",".join([sym for sym in symbols[:25]]) if symbols else None,
-            "securityType": security_type,
-            "transactionType": transaction_type,
-            "marketSession": market_session,
-        }
-
-        req = await self.session.get(api_url, params=payload)
-        req.raise_for_status()
-
-        LOGGER.debug(req.text)
-
-        return get_request_result(req, resp_format)
-
-    async def perform_request(
-        self, method, api_url: str, payload: Union[dict, str], resp_format: str = "xml"
-    ) -> dict:
-        LOGGER.debug(api_url)
-        LOGGER.debug("payload: %s", payload)
-
-        if resp_format == "json":
-            req = await method(api_url, json=payload)
-        else:
-            headers = {"Content-Type": "application/xml"}
-            payload = emit_xml(payload)
-            LOGGER.debug("xml payload: %s", payload)
-            req = await method(api_url, content=payload, headers=headers)
-
-        return get_request_result(req, resp_format)
-
-    async def preview_equity_order(self, **kwargs) -> dict:
-        LOGGER.debug(kwargs)
-        ETradeOrder.check_order(**kwargs)
-        api_url = f'{self.base_url}/{kwargs["accountIdKey"]}/orders/preview'
-        payload = ETradeOrder.build_order_payload("PreviewOrderRequest", **kwargs)
-        return await self.perform_request(self.session.post, api_url, payload, "xml")
-
-    async def place_equity_order(self, **kwargs) -> dict:
-        LOGGER.debug(kwargs)
-        ETradeOrder.check_order(**kwargs)
-
-        if "previewId" not in kwargs:
-            preview = await self.preview_equity_order(**kwargs)
-            kwargs["previewId"] = preview["PreviewOrderResponse"]["PreviewIds"][
-                "previewId"
-            ]
-
-        api_url = f'{self.base_url}/{kwargs["accountIdKey"]}/orders/place'
-        payload = ETradeOrder.build_order_payload("PlaceOrderRequest", **kwargs)
-        return await self.perform_request(self.session.post, api_url, payload, "xml")
-
-    async def list_order_details(
-        self, account_id_key: str, order_id: int, resp_format: str = "json"
-    ):
-        api_url = f"{self.base_url}/{account_id_key}/orders/{order_id}{'.json' if resp_format == 'json' else ''}"
-        LOGGER.debug(api_url)
-        req = await self.session.get(api_url)
-        req.raise_for_status()
-        LOGGER.debug(req.text)
-        return xmltodict.parse(req.text) if resp_format.lower() == "xml" else req.json()
-
-    async def cancel_order(
-        self, account_id_key: str, order_num: int, resp_format: str = "xml"
-    ) -> dict:
-        api_url = f"{self.base_url}/{account_id_key}/orders/cancel"
-        payload = {"CancelOrderRequest": {"orderId": order_num}}
-        return await self.perform_request(self.session.put, api_url, payload, resp_format)
-
