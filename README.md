@@ -51,6 +51,13 @@ Python E-Trade API Wrapper with support for both **synchronous** and **asynchron
   * get_option_chains
   * get_option_expire_date
 
+* **NEW: Multi-Leg Options via OrderBuilder**
+  * Spreads (bull/bear call/put)
+  * Butterflies (call/put)
+  * Iron Condors
+  * Box Spreads (for SPX financing)
+  * Buy-Writes (covered calls)
+
 ## Install
 
 ```bash
@@ -152,6 +159,59 @@ asyncio.run(main())
 - `pyetrade.async_api.market` - Market data and quotes
 - `pyetrade.async_api.order` - Order management
 - `pyetrade.async_api.alerts` - Alert management
+
+### Multi-Leg Options with OrderBuilder
+
+Use the `OrderBuilder` class for complex multi-leg options orders:
+
+```python
+from pyetrade import OrderBuilder
+
+# Create a bull call spread
+builder = (
+    OrderBuilder.for_account(account_id_key)
+    .client_order_id("spread-001")
+    .with_symbol("SPY")
+    .with_expiry(2024, 12, 20)
+    .bull_call_spread(long_strike=450.0, short_strike=455.0)
+    .net_debit(2.50)
+    .gfd()
+    .market_session("REGULAR")
+)
+
+# Build the preview request
+preview_request = builder.build_preview_request()
+
+# Use with ETradeOrder to submit
+orders = pyetrade.ETradeOrder(consumer_key, consumer_secret, token, token_secret)
+# ... submit using perform_request with the preview_request payload
+```
+
+**Box Spread Example (SPX Financing):**
+
+```python
+from pyetrade import OrderBuilder
+
+# Create a box spread on SPX for synthetic borrowing
+builder = (
+    OrderBuilder.for_account(account_id_key)
+    .client_order_id("spx-box-001")
+    .with_symbol("SPX")
+    .with_expiry(2024, 12, 20)
+    .box_spread(lower_strike=4500.0, upper_strike=4600.0)
+    .net_debit(99.50)  # Pay $9,950 to receive $10,000 at expiry
+    .gfd()
+)
+
+preview_request = builder.build_preview_request()
+```
+
+**Available Strategies:**
+- `bull_call_spread()`, `bear_call_spread()`, `bull_put_spread()`, `bear_put_spread()`
+- `iron_condor()` - 4-leg credit strategy
+- `box_spread()` - 4-leg arbitrage/financing (ideal for SPX)
+- `call_butterfly()`, `put_butterfly()` - 3-leg strategies
+- `buy_write()` - Covered call (stock + short call)
 
 ## Documentation
 
