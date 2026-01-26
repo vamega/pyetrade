@@ -1,7 +1,7 @@
 PyEtrade Examples
 ==================
 
-PyEtrade examples for some of the modules are as below
+PyEtrade provides both synchronous and asynchronous APIs for interacting with E*TRADE.
 
 Important requirements
 -----------------------
@@ -18,6 +18,9 @@ more information
 
 The following examples assume you were successfully able to obtain the
 `Consumer key` and `Consumer Secret` from E*TRADE.
+
+Synchronous API Examples
+=========================
 
 Primary Authorization
 ----------------------
@@ -278,3 +281,252 @@ Order Module
           orderTerm=orderTerm,
           marketSession=marketSession,
         )
+
+
+Asynchronous API Examples
+==========================
+
+The async API provides the same functionality as the synchronous API but uses Python's
+``async``/``await`` syntax for non-blocking I/O operations. All async classes are available
+in the ``pyetrade.async_api`` module.
+
+Primary Authorization (Async)
+------------------------------
+
+.. code-block:: python
+
+    # Importing the async modules
+    import asyncio
+    from pyetrade.async_api.authorization import ETradeOAuth
+
+    async def get_tokens():
+        # Obtained secrets from Etrade for Sandbox or Live
+        consumer_key = "<CONSUMER_KEY>"
+        consumer_secret = "<SECRET_KEY>"
+
+        # Using the async EtradeOAuth object
+        oauth = ETradeOAuth(consumer_key, consumer_secret)
+        print(await oauth.get_request_token())  # Use the printed URL
+
+        # Use the printed URL to retrieve Verification code
+        verifier_code = input("Enter verification code: ")
+        tokens = await oauth.get_access_token(verifier_code)
+        print(tokens)
+        return tokens
+
+    # Run the async function
+    tokens = asyncio.run(get_tokens())
+
+
+Access Management (Async)
+--------------------------
+
+.. code-block:: python
+
+    import asyncio
+    from pyetrade.async_api.authorization import ETradeAccessManager
+
+    async def manage_tokens():
+        consumer_key = "<CONSUMER_KEY>"
+        consumer_secret = "<SECRET_KEY>"
+        tokens = {'oauth_token': '<TOKEN>',
+                  'oauth_token_secret': '<TOKEN_SECRET>'}
+
+        # Setting up the async Access Manager
+        authManager = ETradeAccessManager(
+            consumer_key,
+            consumer_secret,
+            tokens['oauth_token'],
+            tokens['oauth_token_secret']
+        )
+
+        # Renew access token
+        await authManager.renew_access_token()
+
+        # Revoke access token
+        await authManager.revoke_access_token()
+
+    asyncio.run(manage_tokens())
+
+
+Accounts Management (Async)
+----------------------------
+
+.. code-block:: python
+
+    import asyncio
+    from pyetrade.async_api.accounts import ETradeAccounts
+
+    async def get_account_info():
+        consumer_key = "<CONSUMER_KEY>"
+        consumer_secret = "<SECRET_KEY>"
+        tokens = {'oauth_token': '<TOKEN>',
+                  'oauth_token_secret': '<TOKEN_SECRET>'}
+
+        # Create async accounts object
+        accounts = ETradeAccounts(
+            consumer_key,
+            consumer_secret,
+            tokens['oauth_token'],
+            tokens['oauth_token_secret'],
+            dev=True
+        )
+
+        # List all accounts
+        account_list = await accounts.list_accounts(resp_format='json')
+        print(account_list)
+
+        accountIDKey = '<Account ID Key>'
+
+        # Get account balance
+        balance = await accounts.get_account_balance(accountIDKey, resp_format='json')
+        print(balance)
+
+        # Get account portfolio
+        portfolio = await accounts.get_account_portfolio(accountIDKey, resp_format='json')
+        print(portfolio)
+
+        # List transactions
+        transactions = await accounts.list_transactions(accountIDKey, resp_format='json')
+        print(transactions)
+
+    asyncio.run(get_account_info())
+
+
+Market Module (Async)
+----------------------
+
+.. code-block:: python
+
+    import asyncio
+    import datetime as dt
+    from pyetrade.async_api.market import ETradeMarket
+
+    async def get_market_data():
+        consumer_key = "<CONSUMER_KEY>"
+        consumer_secret = "<SECRET_KEY>"
+        tokens = {'oauth_token': '<TOKEN>',
+                  'oauth_token_secret': '<TOKEN_SECRET>'}
+
+        market = ETradeMarket(
+            consumer_key,
+            consumer_secret,
+            tokens['oauth_token'],
+            tokens['oauth_token_secret'],
+            dev=True
+        )
+
+        # Look up product
+        product = await market.look_up_product('alphabet', resp_format='json')
+        print(product)
+
+        # Get quote
+        quote = await market.get_quote(['GOOG'], resp_format='json')
+        print(quote)
+
+        # Get option chains
+        expiry = dt.datetime(year=2024, month=12, day=20)
+        chains = await market.get_option_chains('GOOG', expiry_date=expiry, resp_format='json')
+        print(chains)
+
+    asyncio.run(get_market_data())
+
+
+Order Module (Async)
+---------------------
+
+.. code-block:: python
+
+    import asyncio
+    from pyetrade.async_api.order import ETradeOrder
+
+    async def manage_orders():
+        consumer_key = "<CONSUMER_KEY>"
+        consumer_secret = "<SECRET_KEY>"
+        tokens = {'oauth_token': '<TOKEN>',
+                  'oauth_token_secret': '<TOKEN_SECRET>'}
+
+        orders = ETradeOrder(
+            consumer_key,
+            consumer_secret,
+            tokens['oauth_token'],
+            tokens['oauth_token_secret'],
+            dev=True
+        )
+
+        accountIDKey = '<Account ID Key>'
+
+        # List orders
+        order_list = await orders.list_orders(accountIDKey, resp_format='json')
+        print(order_list)
+
+        # Preview equity order
+        preview = await orders.preview_equity_order(
+            accountIdKey=accountIDKey,
+            symbol="AAPL",
+            orderAction="BUY",
+            clientOrderId="ABC123",
+            priceType="MARKET",
+            quantity=10,
+            orderTerm="GOOD_FOR_DAY",
+            marketSession="REGULAR"
+        )
+        print(preview)
+
+        # Place equity order (requires preview ID)
+        order_response = await orders.place_equity_order(
+            accountIdKey=accountIDKey,
+            symbol="AAPL",
+            orderAction="BUY",
+            clientOrderId="ABC123",
+            priceType="MARKET",
+            quantity=10,
+            orderTerm="GOOD_FOR_DAY",
+            marketSession="REGULAR"
+        )
+        print(order_response)
+
+    asyncio.run(manage_orders())
+
+
+Concurrent Requests (Async)
+----------------------------
+
+One of the main benefits of the async API is the ability to make concurrent requests:
+
+.. code-block:: python
+
+    import asyncio
+    from pyetrade.async_api.accounts import ETradeAccounts
+    from pyetrade.async_api.market import ETradeMarket
+
+    async def get_multiple_data():
+        consumer_key = "<CONSUMER_KEY>"
+        consumer_secret = "<SECRET_KEY>"
+        tokens = {'oauth_token': '<TOKEN>',
+                  'oauth_token_secret': '<TOKEN_SECRET>'}
+
+        # Create clients
+        accounts = ETradeAccounts(
+            consumer_key, consumer_secret,
+            tokens['oauth_token'], tokens['oauth_token_secret'],
+            dev=True
+        )
+        market = ETradeMarket(
+            consumer_key, consumer_secret,
+            tokens['oauth_token'], tokens['oauth_token_secret'],
+            dev=True
+        )
+
+        # Make concurrent requests
+        account_list, quote_aapl, quote_goog = await asyncio.gather(
+            accounts.list_accounts(resp_format='json'),
+            market.get_quote(['AAPL'], resp_format='json'),
+            market.get_quote(['GOOG'], resp_format='json')
+        )
+
+        print("Accounts:", account_list)
+        print("AAPL Quote:", quote_aapl)
+        print("GOOG Quote:", quote_goog)
+
+    asyncio.run(get_multiple_data())
