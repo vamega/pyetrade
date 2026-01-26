@@ -46,6 +46,24 @@ pyetrade\.order module
     :show-inheritance:
 
 
+pyetrade\.types module
+^^^^^^^^^^^^^^^^^^^^^^
+
+.. automodule:: pyetrade.types
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
+pyetrade\.order_builder module
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. automodule:: pyetrade.order_builder
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
 Asynchronous API
 ----------------
 
