@@ -118,6 +118,45 @@ accounts = pyetrade.ETradeAccounts(
 print(accounts.list_accounts())
 ```
 
+### OrderBuilder (Synchronous)
+
+Use `OrderBuilder` for options/multi-leg orders and preview/place via the Orders API.
+
+```python
+import pyetrade
+from pyetrade import OrderBuilder
+
+consumer_key = "<CONSUMER_KEY>"
+consumer_secret = "<SECRET_KEY>"
+tokens = {
+    "oauth_token": "<TOKEN FROM THE SCRIPT ABOVE>",
+    "oauth_token_secret": "<TOKEN FROM THE SCRIPT ABOVE>",
+}
+
+order_client = pyetrade.ETradeOrder(
+    consumer_key,
+    consumer_secret,
+    tokens["oauth_token"],
+    tokens["oauth_token_secret"],
+)
+
+builder = (
+    OrderBuilder.for_account("<ACCOUNT_ID_KEY>")
+    .order_type("OPTN")
+    .client_order_id("opt-001")
+    .with_symbol("SPY")
+    .with_expiry(2024, 12, 20)
+    .add_long_call(450.0, qty=1)
+    .limit(2.50)
+    .gfd()
+    .market_session("REGULAR")
+)
+
+preview = order_client.preview_order_builder(builder, resp_format="json")
+preview_id = preview["PreviewOrderResponse"]["PreviewIds"][0]["previewId"]
+place = order_client.place_order_builder(builder, [preview_id], resp_format="json")
+```
+
 ### Asynchronous API
 
 For async operations, import from `pyetrade.async_api`:
@@ -152,6 +191,48 @@ async def main():
 asyncio.run(main())
 ```
 
+### OrderBuilder (Asynchronous)
+
+```python
+import asyncio
+from pyetrade import OrderBuilder
+from pyetrade.async_api.order import ETradeOrder
+
+async def main():
+    consumer_key = "<CONSUMER_KEY>"
+    consumer_secret = "<SECRET_KEY>"
+    tokens = {
+        "oauth_token": "<TOKEN FROM THE SCRIPT ABOVE>",
+        "oauth_token_secret": "<TOKEN FROM THE SCRIPT ABOVE>",
+    }
+
+    order_client = ETradeOrder(
+        consumer_key,
+        consumer_secret,
+        tokens["oauth_token"],
+        tokens["oauth_token_secret"],
+    )
+
+    builder = (
+        OrderBuilder.for_account("<ACCOUNT_ID_KEY>")
+        .order_type("SPREADS")
+        .client_order_id("spread-001")
+        .with_symbol("SPY")
+        .with_expiry(2024, 12, 20)
+        .add_long_call(450.0)
+        .add_short_call(455.0)
+        .net_debit(2.50)
+        .gfd()
+        .market_session("REGULAR")
+    )
+
+    preview = await order_client.preview_order_builder(builder, resp_format="json")
+    preview_id = preview["PreviewOrderResponse"]["PreviewIds"][0]["previewId"]
+    place = await order_client.place_order_builder(builder, [preview_id], resp_format="json")
+
+asyncio.run(main())
+```
+
 **Available async modules:**
 - `pyetrade.async_api.authorization` - OAuth and access management
 - `pyetrade.async_api.accounts` - Account information and transactions
@@ -182,7 +263,7 @@ builder = (
 preview_request = builder.build_preview_request()
 
 # Use with ETradeOrder to submit
-orders = pyetrade.ETradeOrder(consumer_key, consumer_secret, token, token_secret)
+order_client = pyetrade.ETradeOrder(consumer_key, consumer_secret, token, token_secret)
 # ... submit using perform_request with the preview_request payload
 ```
 

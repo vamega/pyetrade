@@ -33,6 +33,7 @@ Primary Authorization
     # Importing the pyetrade module
     import pyetrade
     from pyetrade import OrderBuilder
+    from pyetrade import OrderBuilder
 
     # Obtained secrets from Etrade for Sandbox or Live
     consumer_key = "<CONSUMER_KEY>"
@@ -237,7 +238,7 @@ Order Module
     # Arg dev determines the environment Sandbox (dev=True)
     # or Live/Production (dev=False)
 
-    orders = pyetrade.ETradeOrder(
+    order_client = pyetrade.ETradeOrder(
         consumer_key,
         consumer_secret,
         tokens['oauth_token'],
@@ -251,12 +252,10 @@ Order Module
     accountIDKey = '<Key for the chosen account from pyetrade.ETradeAccounts.list_accounts>'
 
     # Lists orders of a account
-    print(orders.list_orders(accountIDKey, resp_format='json'))
+    print(order_client.list_orders(accountIDKey, resp_format='json'))
 
     # place option order via OrderBuilder:
-    action = "BUY_OPEN"
     symbol = "PLTR"
-    expiryDate = "2022-02-18"
     strikePrice = 23
     quantity = 1
     limitPrice = 1.97
@@ -275,7 +274,9 @@ Order Module
         .order_term(orderTerm)
         .market_session(marketSession)
     )
-    resp = orders.preview_order_builder(builder, resp_format="xml")
+    resp = order_client.preview_order_builder(builder, resp_format="xml")
+    preview_id = resp["PreviewOrderResponse"]["PreviewIds"][0]["previewId"]
+    resp = order_client.place_order_builder(builder, [preview_id], resp_format="xml")
 
 
 Asynchronous API Examples
@@ -441,7 +442,7 @@ Order Module (Async)
         tokens = {'oauth_token': '<TOKEN>',
                   'oauth_token_secret': '<TOKEN_SECRET>'}
 
-        orders = ETradeOrder(
+        order_client = ETradeOrder(
             consumer_key,
             consumer_secret,
             tokens['oauth_token'],
@@ -452,11 +453,11 @@ Order Module (Async)
         accountIDKey = '<Account ID Key>'
 
         # List orders
-        order_list = await orders.list_orders(accountIDKey, resp_format='json')
+        order_list = await order_client.list_orders(accountIDKey, resp_format='json')
         print(order_list)
 
         # Preview equity order
-        preview = await orders.preview_equity_order(
+        preview = await order_client.preview_equity_order(
             accountIdKey=accountIDKey,
             symbol="AAPL",
             orderAction="BUY",
@@ -469,7 +470,7 @@ Order Module (Async)
         print(preview)
 
         # Place equity order (requires preview ID)
-        order_response = await orders.place_equity_order(
+        order_response = await order_client.place_equity_order(
             accountIdKey=accountIDKey,
             symbol="AAPL",
             orderAction="BUY",
@@ -482,6 +483,49 @@ Order Module (Async)
         print(order_response)
 
     asyncio.run(manage_orders())
+
+Order Builder (Async)
+----------------------
+
+.. code-block:: python
+
+    import asyncio
+    from pyetrade import OrderBuilder
+    from pyetrade.async_api.order import ETradeOrder
+
+    async def manage_order_builder():
+        consumer_key = "<CONSUMER_KEY>"
+        consumer_secret = "<SECRET_KEY>"
+        tokens = {'oauth_token': '<TOKEN>',
+                  'oauth_token_secret': '<TOKEN_SECRET>'}
+
+        order_client = ETradeOrder(
+            consumer_key,
+            consumer_secret,
+            tokens['oauth_token'],
+            tokens['oauth_token_secret'],
+            dev=True
+        )
+
+        builder = (
+            OrderBuilder.for_account("<ACCOUNT_ID_KEY>")
+            .order_type("SPREADS")
+            .client_order_id("spread-001")
+            .with_symbol("SPY")
+            .with_expiry(2024, 12, 20)
+            .add_long_call(450.0)
+            .add_short_call(455.0)
+            .net_debit(2.50)
+            .gfd()
+            .market_session("REGULAR")
+        )
+
+        preview = await order_client.preview_order_builder(builder, resp_format="json")
+        preview_id = preview["PreviewOrderResponse"]["PreviewIds"][0]["previewId"]
+        place = await order_client.place_order_builder(builder, [preview_id], resp_format="json")
+        print(place)
+
+    asyncio.run(manage_order_builder())
 
 
 Concurrent Requests (Async)
