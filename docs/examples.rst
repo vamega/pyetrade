@@ -32,6 +32,7 @@ Primary Authorization
 
     # Importing the pyetrade module
     import pyetrade
+    from pyetrade import OrderBuilder
 
     # Obtained secrets from Etrade for Sandbox or Live
     consumer_key = "<CONSUMER_KEY>"
@@ -252,35 +253,29 @@ Order Module
     # Lists orders of a account
     print(orders.list_orders(accountIDKey, resp_format='json'))
 
-    # place option order:
+    # place option order via OrderBuilder:
     action = "BUY_OPEN"
     symbol = "PLTR"
-    callPut = "PUT"
     expiryDate = "2022-02-18"
     strikePrice = 23
     quantity = 1
-    limitPrice=1.97
+    limitPrice = 1.97
     orderTerm = "GOOD_UNTIL_CANCEL"  # "IMMEDIATE_OR_CANCEL"  # "GOOD_FOR_DAY"
     marketSession = "REGULAR"
-    priceType = "LIMIT"
-    clientOrderId = "ABC123456" # Unique alphanumeric identifier to prevent duplicate submissions of the same order
+    clientOrderId = "ABC123456"  # Unique alphanumeric identifier to prevent duplicate submissions of the same order
 
-    resp = orders.place_option_order(
-          resp_format="xml",
-          accountIdKey = accountIDKey,
-          symbol = symbol,
-          callPut=callPut,
-          expiryDate=expiryDate,
-          strikePrice=strikePrice,
-          orderAction=action,
-          clientOrderId=clientOrderId,
-          priceType= priceType,
-          limitPrice=limitPrice,
-          allOrNone=False,
-          quantity=quantity,
-          orderTerm=orderTerm,
-          marketSession=marketSession,
-        )
+    builder = (
+        OrderBuilder.for_account(accountIDKey)
+        .order_type("OPTN")
+        .client_order_id(clientOrderId)
+        .with_symbol(symbol)
+        .with_expiry(2022, 2, 18)
+        .add_long_put(strikePrice, qty=quantity)
+        .limit(limitPrice)
+        .order_term(orderTerm)
+        .market_session(marketSession)
+    )
+    resp = orders.preview_order_builder(builder, resp_format="xml")
 
 
 Asynchronous API Examples

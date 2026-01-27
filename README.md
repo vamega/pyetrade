@@ -40,7 +40,6 @@ Python E-Trade API Wrapper with support for both **synchronous** and **asynchron
   * change_preview_equity_order
   * place_equity_order
   * place_changed_equity_order
-  * place_option_order
   * place_changed_option_order
   * cancel_order
 
