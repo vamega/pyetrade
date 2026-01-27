@@ -25,7 +25,7 @@ class TestETradeAlerts:
         alert_id = 123
         response_data = {"AlertDetailsResponse": {"id": 123}}
         
-        url = f"https://apisb.etrade.com/v1/user/alerts.json/{alert_id}"
+        url = f"https://apisb.etrade.com/v1/user/alerts/{alert_id}.json"
         
         respx.get(url).mock(return_value=Response(200, json=response_data))
         
@@ -36,9 +36,9 @@ class TestETradeAlerts:
     async def test_delete_alert(self):
         alerts = ETradeAlerts("key", "secret", "token", "token_secret", dev=True)
         alert_id = 123
-        response_data = {"DeleteAlertResponse": {"id": 123}}
+        response_data = {"DeleteAlertsResponse": {"id": 123}}
         
-        url = f"https://apisb.etrade.com/v1/user/alerts.json/{alert_id}"
+        url = f"https://apisb.etrade.com/v1/user/alerts/{alert_id}.json"
         
         respx.delete(url).mock(return_value=Response(200, json=response_data))
         

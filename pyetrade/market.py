@@ -170,7 +170,7 @@ class ETradeMarket(object):
     def get_option_chains(
         self,
         underlier: str,
-        expiry_date: datetime.date,
+        expiry_date: datetime.date = None,
         skip_adjusted: str = None,
         chain_type: str = None,
         strike_price_near: int = None,

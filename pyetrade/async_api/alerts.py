@@ -35,7 +35,7 @@ class ETradeAlerts(object):
     ) -> dict:
         api_url = "%s%s" % (
             self.base_url,
-            ".json" if resp_format == "json" else "",
+            ".json" if resp_format == "json" else ".xml",
         )
         LOGGER.debug(api_url)
         if count >= 301:
@@ -43,9 +43,12 @@ class ETradeAlerts(object):
                 f"Count {count} is greater than the max allowable value (300), using 300"
             )
             count = 300
-        req = await self.session.get(
-            api_url, params={"count": count, "direction": sort_order}
-        )
+        params = {}
+        if count != 25:
+            params["count"] = count
+        if sort_order and sort_order != "DESC":
+            params["direction"] = sort_order
+        req = await self.session.get(api_url, params=params or None)
         req.raise_for_status()
         LOGGER.debug(req.text)
         return xmltodict.parse(req.text) if resp_format.lower() == "xml" else req.json()
@@ -53,22 +56,23 @@ class ETradeAlerts(object):
     async def list_alert_details(
         self, alert_id: int, html_tags: bool = False, resp_format: str = "xml"
     ) -> dict:
-        api_url = "%s%s/%s" % (
+        api_url = "%s/%s%s" % (
             self.base_url,
-            ".json" if resp_format == "json" else "",
             alert_id,
+            ".json" if resp_format == "json" else ".xml",
         )
         LOGGER.debug(api_url)
-        req = await self.session.get(api_url, params={"htmlTags": html_tags})
+        params = {"htmlTags": html_tags} if html_tags else None
+        req = await self.session.get(api_url, params=params)
         req.raise_for_status()
         LOGGER.debug(req.text)
         return xmltodict.parse(req.text) if resp_format.lower() == "xml" else req.json()
 
     async def delete_alert(self, alert_id: int, resp_format: str = "xml") -> dict:
-        api_url = "%s%s/%s" % (
+        api_url = "%s/%s%s" % (
             self.base_url,
-            ".json" if resp_format == "json" else "",
             alert_id,
+            ".json" if resp_format == "json" else ".xml",
         )
         LOGGER.debug(api_url)
         req = await self.session.delete(api_url)

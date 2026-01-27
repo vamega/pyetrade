@@ -271,6 +271,16 @@ class ETradeOrder(object):
             raise OrderException
 
     @staticmethod
+    def _extract_preview_id(preview: dict):
+        preview_ids = preview.get("PreviewOrderResponse", {}).get("PreviewIds")
+        if isinstance(preview_ids, list):
+            if preview_ids:
+                return preview_ids[0].get("previewId")
+        if isinstance(preview_ids, dict):
+            return preview_ids.get("previewId")
+        raise OrderException
+
+    @staticmethod
     def build_order_payload(order_type: str, **kwargs) -> dict:
         """:description: Builds the POST payload of a preview or place order
                       (Used internally)
@@ -299,34 +309,39 @@ class ETradeOrder(object):
             "quantityType": "QUANTITY",
             "quantity": kwargs["quantity"],
         }
+        if securityType == "OPTN":
+            instrument["orderedQuantity"] = kwargs["quantity"]
 
-        order = kwargs
-        order["Instrument"] = instrument
+        stop_price = kwargs.get("stopPrice")
+        limit_price = kwargs.get("limitPrice")
 
-        def remove_invalid_price_from_kwargs(key: str) -> None:
-            if float(kwargs.get(key, 0)) <= 0:
-                kwargs.pop(key, 0)
+        order_detail = {
+            "allOrNone": str(kwargs.get("allOrNone", "false")).lower(),
+            "priceType": kwargs["priceType"],
+            "orderTerm": kwargs["orderTerm"],
+            "marketSession": kwargs["marketSession"],
+            "stopPrice": "",
+            "limitPrice": "",
+            "Instrument": [instrument],
+        }
 
-        remove_invalid_price_from_kwargs("stopPrice")
-        remove_invalid_price_from_kwargs("limitPrice")
-
-        if "stopPrice" in kwargs:
-            stopPrice = float(kwargs["stopPrice"])
+        if stop_price is not None:
+            stopPrice = float(stop_price)
             round_down = "SELL" == kwargs["orderAction"][:4]
-            spstr = to_decimal_str(stopPrice, round_down)
-
-            order["stopPrice"] = spstr
+            order_detail["stopPrice"] = to_decimal_str(stopPrice, round_down)
+        if limit_price is not None:
+            order_detail["limitPrice"] = str(limit_price)
 
         payload = {
             order_type: {
                 "orderType": securityType,
                 "clientOrderId": kwargs["clientOrderId"],
-                "Order": order,
+                "Order": [order_detail],
             }
         }
 
         if "previewId" in kwargs:
-            payload[order_type]["PreviewIds"] = {"previewId": kwargs["previewId"]}
+            payload[order_type]["PreviewIds"] = [{"previewId": kwargs["previewId"]}]
 
         return payload
 
@@ -364,7 +379,8 @@ class ETradeOrder(object):
         # payload creation
         payload = self.build_order_payload("PreviewOrderRequest", **kwargs)
 
-        return self.perform_request(self.session.post, api_url, payload, "xml")
+        resp_format = kwargs.get("resp_format", "xml")
+        return self.perform_request(self.session.post, api_url, payload, resp_format)
 
     def change_preview_equity_order(
         self, account_id_key: str, order_id: str, **kwargs
@@ -383,7 +399,29 @@ class ETradeOrder(object):
         # payload creation
         payload = self.build_order_payload("PreviewOrderRequest", **kwargs)
 
-        return self.perform_request(self.session.put, api_url, payload, "xml")
+        resp_format = kwargs.get("resp_format", "xml")
+        return self.perform_request(self.session.put, api_url, payload, resp_format)
+
+    def preview_option_order(self, **kwargs) -> dict:
+        """:description: Preview option order (single leg)."""
+        kwargs["securityType"] = "OPTN"
+        return self.preview_equity_order(**kwargs)
+
+    def preview_order_builder(self, builder, resp_format: str = "xml") -> dict:
+        """Preview an order built with OrderBuilder."""
+        payload = builder.build_preview_payload()
+        account_id_key = builder.get_account_id_key()
+        api_url = f"{self.base_url}/{account_id_key}/orders/preview"
+        return self.perform_request(self.session.post, api_url, payload, resp_format)
+
+    def place_order_builder(
+        self, builder, preview_ids, resp_format: str = "xml"
+    ) -> dict:
+        """Place an order built with OrderBuilder."""
+        payload = builder.build_place_payload(preview_ids)
+        account_id_key = builder.get_account_id_key()
+        api_url = f"{self.base_url}/{account_id_key}/orders/place"
+        return self.perform_request(self.session.post, api_url, payload, resp_format)
 
     def place_option_order(self, **kwargs) -> dict:
         """:description: Places Option Order, only single leg CALL or PUT is supported for now
@@ -410,9 +448,7 @@ class ETradeOrder(object):
             )
 
             preview = self.preview_equity_order(**kwargs)
-            kwargs["previewId"] = preview["PreviewOrderResponse"]["PreviewIds"][
-                "previewId"
-            ]
+            kwargs["previewId"] = self._extract_preview_id(preview)
 
             LOGGER.debug(
                 "Got a successful preview with previewId: %s", kwargs["previewId"]
@@ -423,7 +459,8 @@ class ETradeOrder(object):
         # payload creation
         payload = self.build_order_payload("PlaceOrderRequest", **kwargs)
 
-        return self.perform_request(self.session.post, api_url, payload, "xml")
+        resp_format = kwargs.get("resp_format", "xml")
+        return self.perform_request(self.session.post, api_url, payload, resp_format)
 
     def place_changed_option_order(self, **kwargs) -> dict:
         """:description: Places Option Order, only single leg CALL or PUT is supported for now
@@ -455,9 +492,7 @@ class ETradeOrder(object):
                 LOGGER.error(preview)
                 raise Exception("Please check your order!")
 
-            kwargs["previewId"] = preview["PreviewOrderResponse"]["PreviewIds"][
-                "previewId"
-            ]
+            kwargs["previewId"] = self._extract_preview_id(preview)
             LOGGER.debug(
                 "Got a successful preview with previewId: %s", kwargs["previewId"]
             )
@@ -467,7 +502,8 @@ class ETradeOrder(object):
         # payload creation
         payload = self.build_order_payload("PlaceOrderRequest", **kwargs)
 
-        return self.perform_request(self.session.put, api_url, payload, "xml")
+        resp_format = kwargs.get("resp_format", "xml")
+        return self.perform_request(self.session.put, api_url, payload, resp_format)
 
     def cancel_order(
         self, account_id_key: str, order_num: int, resp_format: str = "xml"

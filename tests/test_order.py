@@ -200,23 +200,24 @@ class TestETradeOrder(unittest.TestCase):
             "PreviewOrderRequest": {
                 "orderType": "EQ",
                 "clientOrderId": "1a2b3c",
-                "Order": {
-                    "resp_format": "json",
-                    "accountId": "12345",
-                    "symbol": "ABC",
-                    "orderAction": "BUY",
-                    "clientOrderId": "1a2b3c",
-                    "priceType": "MARKET",
-                    "quantity": 100,
-                    "orderTerm": "GOOD_UNTIL_CANCEL",
-                    "marketSession": "REGULAR",
-                    "Instrument": {
-                        "Product": {"securityType": "EQ", "symbol": "ABC"},
-                        "orderAction": "BUY",
-                        "quantityType": "QUANTITY",
-                        "quantity": 100,
-                    },
-                },
+                "Order": [
+                    {
+                        "allOrNone": "false",
+                        "priceType": "MARKET",
+                        "orderTerm": "GOOD_UNTIL_CANCEL",
+                        "marketSession": "REGULAR",
+                        "stopPrice": "",
+                        "limitPrice": "",
+                        "Instrument": [
+                            {
+                                "Product": {"securityType": "EQ", "symbol": "ABC"},
+                                "orderAction": "BUY",
+                                "quantityType": "QUANTITY",
+                                "quantity": 100,
+                            }
+                        ],
+                    }
+                ],
             }
         }
         self.assertTrue(expected == payload)
@@ -250,7 +251,7 @@ class TestETradeOrder(unittest.TestCase):
                 )
 
                 self.assertEqual(
-                    payload["PreviewOrderRequest"]["Order"]["stopPrice"], fd[1]
+                    payload["PreviewOrderRequest"]["Order"][0]["stopPrice"], fd[1]
                 )
 
         # Test payload: BUY STOP
@@ -282,7 +283,7 @@ class TestETradeOrder(unittest.TestCase):
                 )
 
                 self.assertEqual(
-                    payload["PreviewOrderRequest"]["Order"]["stopPrice"], fd[1]
+                    payload["PreviewOrderRequest"]["Order"][0]["stopPrice"], fd[1]
                 )
 
     def test_place_equity_order_exception(self):

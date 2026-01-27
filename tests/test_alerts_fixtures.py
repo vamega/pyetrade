@@ -57,7 +57,7 @@ class TestETradeAlertsWithFixtures:
         alerts = ETradeAlerts("key", "secret", "token", "token_secret", dev=False)
         result = alerts.delete_alert(12345, resp_format="xml")
 
-        assert "AlertsResponse" in result
+        assert "DeleteAlertsResponse" in result
 
 
 @pytest.mark.asyncio
@@ -101,4 +101,4 @@ class TestETradeAlertsAsyncWithFixtures:
         alerts = ETradeAlertsAsync("key", "secret", "token", "token_secret", dev=False)
         result = await alerts.delete_alert(12345, resp_format="xml")
 
-        assert "AlertsResponse" in result
+        assert "DeleteAlertsResponse" in result

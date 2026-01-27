@@ -185,7 +185,7 @@ class ETradeOrder(object):
                 % len(symbols)
             )
 
-        api_url = f"{self.base_url}/{account_id_key}/orders{'.json' if resp_format == 'json' else ''}"
+        api_url = f"{self.base_url}/{account_id_key}/orders{'.json' if resp_format == 'json' else '.xml'}"
         LOGGER.debug(api_url)
 
         if count >= 101:
@@ -194,19 +194,27 @@ class ETradeOrder(object):
             )
             count = 100
 
-        payload = {
-            "marker": marker,
-            "count": count,
-            "status": status,
-            "fromDate": from_date.date().strftime("%m%d%Y") if from_date else None,
-            "toDate": to_date.date().strftime("%m%d%Y") if to_date else None,
-            "symbol": ",".join([sym for sym in symbols[:25]]) if symbols else None,
-            "securityType": security_type,
-            "transactionType": transaction_type,
-            "marketSession": market_session,
-        }
+        payload = {}
+        if marker:
+            payload["marker"] = marker
+        if count is not None and count != 25:
+            payload["count"] = count
+        if status:
+            payload["status"] = status
+        if from_date:
+            payload["fromDate"] = from_date.date().strftime("%m%d%Y")
+        if to_date:
+            payload["toDate"] = to_date.date().strftime("%m%d%Y")
+        if symbols:
+            payload["symbol"] = ",".join([sym for sym in symbols[:25]])
+        if security_type:
+            payload["securityType"] = security_type
+        if transaction_type:
+            payload["transactionType"] = transaction_type
+        if market_session and market_session != "REGULAR":
+            payload["marketSession"] = market_session
 
-        req = await self.session.get(api_url, params=payload)
+        req = await self.session.get(api_url, params=payload or None)
         req.raise_for_status()
 
         LOGGER.debug(req.text)
@@ -234,7 +242,26 @@ class ETradeOrder(object):
         self.check_order(**kwargs)
         api_url = f'{self.base_url}/{kwargs["accountIdKey"]}/orders/preview'
         payload = self.build_order_payload("PreviewOrderRequest", **kwargs)
-        return await self.perform_request(self.session.post, api_url, payload, "xml")
+        resp_format = kwargs.get("resp_format", "xml")
+        return await self.perform_request(self.session.post, api_url, payload, resp_format)
+
+    async def preview_option_order(self, **kwargs) -> dict:
+        kwargs["securityType"] = "OPTN"
+        return await self.preview_equity_order(**kwargs)
+
+    async def preview_order_builder(self, builder, resp_format: str = "xml") -> dict:
+        payload = builder.build_preview_payload()
+        account_id_key = builder.get_account_id_key()
+        api_url = f"{self.base_url}/{account_id_key}/orders/preview"
+        return await self.perform_request(self.session.post, api_url, payload, resp_format)
+
+    async def place_order_builder(
+        self, builder, preview_ids, resp_format: str = "xml"
+    ) -> dict:
+        payload = builder.build_place_payload(preview_ids)
+        account_id_key = builder.get_account_id_key()
+        api_url = f"{self.base_url}/{account_id_key}/orders/place"
+        return await self.perform_request(self.session.post, api_url, payload, resp_format)
 
     async def place_equity_order(self, **kwargs) -> dict:
         LOGGER.debug(kwargs)
@@ -242,13 +269,12 @@ class ETradeOrder(object):
 
         if "previewId" not in kwargs:
             preview = await self.preview_equity_order(**kwargs)
-            kwargs["previewId"] = preview["PreviewOrderResponse"]["PreviewIds"][
-                "previewId"
-            ]
+            kwargs["previewId"] = self._extract_preview_id(preview)
 
         api_url = f'{self.base_url}/{kwargs["accountIdKey"]}/orders/place'
         payload = self.build_order_payload("PlaceOrderRequest", **kwargs)
-        return await self.perform_request(self.session.post, api_url, payload, "xml")
+        resp_format = kwargs.get("resp_format", "xml")
+        return await self.perform_request(self.session.post, api_url, payload, resp_format)
 
     async def list_order_details(
         self, account_id_key: str, order_id: int, resp_format: str = "json"
@@ -263,7 +289,11 @@ class ETradeOrder(object):
     async def cancel_order(
         self, account_id_key: str, order_num: int, resp_format: str = "xml"
     ) -> dict:
-        api_url = f"{self.base_url}/{account_id_key}/orders/cancel"
+        api_url = "%s/%s/orders/cancel%s" % (
+            self.base_url,
+            account_id_key,
+            ".json" if resp_format == "json" else "",
+        )
         payload = {"CancelOrderRequest": {"orderId": order_num}}
         return await self.perform_request(self.session.put, api_url, payload, resp_format)
 
@@ -295,6 +325,16 @@ class ETradeOrder(object):
             raise OrderException
 
     @staticmethod
+    def _extract_preview_id(preview: dict):
+        preview_ids = preview.get("PreviewOrderResponse", {}).get("PreviewIds")
+        if isinstance(preview_ids, list):
+            if preview_ids:
+                return preview_ids[0].get("previewId")
+        if isinstance(preview_ids, dict):
+            return preview_ids.get("previewId")
+        raise OrderException
+
+    @staticmethod
     def build_order_payload(order_type: str, **kwargs) -> dict:
         securityType = kwargs.get("securityType", "EQ")  # EQ by default
         product = {"securityType": securityType, "symbol": kwargs["symbol"]}
@@ -319,33 +359,38 @@ class ETradeOrder(object):
             "quantityType": "QUANTITY",
             "quantity": kwargs["quantity"],
         }
+        if securityType == "OPTN":
+            instrument["orderedQuantity"] = kwargs["quantity"]
 
-        order = kwargs
-        order["Instrument"] = instrument
+        stop_price = kwargs.get("stopPrice")
+        limit_price = kwargs.get("limitPrice")
 
-        def remove_invalid_price_from_kwargs(key: str) -> None:
-            if float(kwargs.get(key, 0)) <= 0:
-                kwargs.pop(key, 0)
+        order_detail = {
+            "allOrNone": str(kwargs.get("allOrNone", "false")).lower(),
+            "priceType": kwargs["priceType"],
+            "orderTerm": kwargs["orderTerm"],
+            "marketSession": kwargs["marketSession"],
+            "stopPrice": "",
+            "limitPrice": "",
+            "Instrument": [instrument],
+        }
 
-        remove_invalid_price_from_kwargs("stopPrice")
-        remove_invalid_price_from_kwargs("limitPrice")
-
-        if "stopPrice" in kwargs:
-            stopPrice = float(kwargs["stopPrice"])
+        if stop_price is not None:
+            stopPrice = float(stop_price)
             round_down = "SELL" == kwargs["orderAction"][:4]
-            spstr = to_decimal_str(stopPrice, round_down)
-
-            order["stopPrice"] = spstr
+            order_detail["stopPrice"] = to_decimal_str(stopPrice, round_down)
+        if limit_price is not None:
+            order_detail["limitPrice"] = str(limit_price)
 
         payload = {
             order_type: {
                 "orderType": securityType,
                 "clientOrderId": kwargs["clientOrderId"],
-                "Order": order,
+                "Order": [order_detail],
             }
         }
 
         if "previewId" in kwargs:
-            payload[order_type]["PreviewIds"] = {"previewId": kwargs["previewId"]}
+            payload[order_type]["PreviewIds"] = [{"previewId": kwargs["previewId"]}]
 
         return payload

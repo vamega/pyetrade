@@ -34,7 +34,7 @@ class ETradeAccounts(object):
     async def list_accounts(self, resp_format: str = "xml") -> dict:
         api_url = "%s/list%s" % (
             self.base_url,
-            ".json" if resp_format == "json" else "",
+            ".json" if resp_format == "json" else ".xml",
         )
         LOGGER.debug(api_url)
         req = await self.session.get(api_url)
@@ -52,13 +52,15 @@ class ETradeAccounts(object):
         api_url = "%s/%s/balance%s" % (
             self.base_url,
             account_id_key,
-            ".json" if resp_format == "json" else "",
+            ".json" if resp_format == "json" else ".xml",
         )
-        payload = {"realTimeNAV": real_time, "instType": "BROKERAGE"}
+        payload = {}
+        if real_time is not None and real_time is False:
+            payload["realTimeNAV"] = real_time
         if account_type:
             payload["accountType"] = account_type
         LOGGER.debug(api_url)
-        req = await self.session.get(api_url, params=payload)
+        req = await self.session.get(api_url, params=payload or None)
         req.raise_for_status()
         LOGGER.debug(req.text)
         return xmltodict.parse(req.text) if resp_format.lower() == "xml" else req.json()

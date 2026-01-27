@@ -34,7 +34,7 @@ class ETradeMarket(object):
     async def look_up_product(self, search_str: str, resp_format: str = "xml") -> dict:
         api_url = "%slookup/%s" % (
             self.base_url,
-            search_str if resp_format.lower() == "xml" else f"{search_str}.json",
+            f"{search_str}.xml" if resp_format.lower() == "xml" else f"{search_str}.json",
         )
         LOGGER.debug(api_url)
         req = await self.session.get(api_url)
@@ -66,6 +66,8 @@ class ETradeMarket(object):
         api_url = "%s%s%s" % (self.base_url, "quote/", ",".join(symbols[:25]))
         if resp_format.lower() == "json":
             api_url += ".json"
+        else:
+            api_url += ".xml"
         if len(args):
             api_url += "?" + "&".join(args)
         LOGGER.debug(api_url)

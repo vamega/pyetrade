@@ -108,12 +108,18 @@ class TestETradeOrderWithFixtures:
     @patch("pyetrade.order.OAuth1Client")
     def test_place_equity_order_json(self, MockOAuthClient):
         """Test place_equity_order with JSON fixture."""
-        json_response = load_json_fixture("PlaceOrderResponseEquity.json")
+        preview_response = load_json_fixture("PreviewOrderResponseEquity.json")
+        place_response = load_json_fixture("PlaceOrderResponseEquity.json")
         
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = json_response
-        MockOAuthClient.return_value.post.return_value = mock_response
+        preview_mock = MagicMock()
+        preview_mock.status_code = 200
+        preview_mock.json.return_value = preview_response
+
+        place_mock = MagicMock()
+        place_mock.status_code = 200
+        place_mock.json.return_value = place_response
+
+        MockOAuthClient.return_value.post.side_effect = [preview_mock, place_mock]
 
         orders = ETradeOrder("key", "secret", "token", "token_secret", dev=False)
         result = orders.place_equity_order(

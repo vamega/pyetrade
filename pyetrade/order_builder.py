@@ -860,6 +860,17 @@ class OrderBuilder:
 
         return request
 
+    def build_preview_payload(self) -> Dict[str, PreviewOrderRequestDict]:
+        """Build the full preview payload with request wrapper."""
+        return {"PreviewOrderRequest": self.build_preview_request()}
+
+    def build_place_payload(
+        self,
+        preview_ids: List[Union[int, PreviewIdDict]],
+    ) -> Dict[str, PlaceOrderRequestDict]:
+        """Build the full place payload with request wrapper."""
+        return {"PlaceOrderRequest": self.build_place_request(preview_ids)}
+
     def get_account_id_key(self) -> Optional[str]:
         """Get the account ID key for this order."""
         return self._account_id_key
