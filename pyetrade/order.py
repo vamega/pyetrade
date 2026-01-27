@@ -423,14 +423,6 @@ class ETradeOrder(object):
         api_url = f"{self.base_url}/{account_id_key}/orders/place"
         return self.perform_request(self.session.post, api_url, payload, resp_format)
 
-    def place_option_order(self, **kwargs) -> dict:
-        """:description: Places Option Order, only single leg CALL or PUT is supported for now
-        :return: Returns confirmation of the equity order
-        """
-        kwargs["securityType"] = "OPTN"
-
-        return self.place_equity_order(**kwargs)
-
     def place_equity_order(self, **kwargs) -> dict:
         """:description: Places Equity Order
         ... (docstring omitted for brevity) ...
