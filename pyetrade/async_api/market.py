@@ -4,6 +4,7 @@ import asyncio
 import xmltodict
 from authlib.integrations.httpx_client import AsyncOAuth1Client
 
+from ..utils import clean_params
 LOGGER = logging.getLogger(__name__)
 
 class ETradeMarket(object):
@@ -133,7 +134,9 @@ class ETradeMarket(object):
             else "optionexpiredate.json",
         )
         LOGGER.debug(api_url)
-        req = await self.session.get(api_url, params={"symbol": symbol, "expiryType": "ALL"})
+        req = await self.session.get(
+            api_url, params=clean_params({"symbol": symbol, "expiryType": "ALL"})
+        )
         req.raise_for_status()
         LOGGER.debug(req.text)
         return xmltodict.parse(req.text) if resp_format.lower() == "xml" else req.json()

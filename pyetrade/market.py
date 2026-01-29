@@ -3,6 +3,7 @@ from datetime import datetime
 import xmltodict
 from authlib.integrations.httpx_client import OAuth1Client
 
+from .utils import clean_params
 LOGGER = logging.getLogger(__name__)
 
 
@@ -294,7 +295,9 @@ class ETradeMarket(object):
 
         LOGGER.debug(api_url)
 
-        req = self.session.get(api_url, params={"symbol": symbol, "expiryType": "ALL"})
+        req = self.session.get(
+            api_url, params=clean_params({"symbol": symbol, "expiryType": "ALL"})
+        )
         req.raise_for_status()
 
         LOGGER.debug(req.text)

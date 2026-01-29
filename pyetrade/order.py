@@ -8,6 +8,7 @@ from jxmlease import emit_xml
 from authlib.integrations.httpx_client import OAuth1Client
 import httpx
 
+from .utils import clean_params
 LOGGER = logging.getLogger(__name__)
 
 # some constants
@@ -181,7 +182,7 @@ class ETradeOrder(object):
             "marketSession": market_session,
         }
 
-        req = self.session.get(api_url, params=payload)
+        req = self.session.get(api_url, params=clean_params(payload))
         req.raise_for_status()
 
         LOGGER.debug(req.text)

@@ -5,6 +5,7 @@ import xmltodict
 import httpx
 from authlib.integrations.httpx_client import AsyncOAuth1Client
 
+from ..utils import clean_params
 LOGGER = logging.getLogger(__name__)
 
 class ETradeAccounts(object):
@@ -60,7 +61,7 @@ class ETradeAccounts(object):
         if account_type:
             payload["accountType"] = account_type
         LOGGER.debug(api_url)
-        req = await self.session.get(api_url, params=payload or None)
+        req = await self.session.get(api_url, params=clean_params(payload))
         req.raise_for_status()
         LOGGER.debug(req.text)
         return xmltodict.parse(req.text) if resp_format.lower() == "xml" else req.json()
@@ -94,7 +95,7 @@ class ETradeAccounts(object):
             "view": view,
         }
         LOGGER.debug(api_url)
-        req = await self.session.get(api_url, params=payload)
+        req = await self.session.get(api_url, params=clean_params(payload))
         req.raise_for_status()
         LOGGER.debug(req.text)
         return xmltodict.parse(req.text) if resp_format.lower() == "xml" else req.json()
@@ -151,7 +152,7 @@ class ETradeAccounts(object):
             "count": count,
         }
         LOGGER.debug(api_url)
-        req = await self.session.get(api_url, params=payload)
+        req = await self.session.get(api_url, params=clean_params(payload))
         req.raise_for_status()
         LOGGER.debug(req.text)
         if req.text == "":
@@ -175,7 +176,7 @@ class ETradeAccounts(object):
             ".json" if resp_format == "json" else "",
         )
         LOGGER.debug(api_url)
-        req = await self.session.get(api_url, params={"storeId": store_id})
+        req = await self.session.get(api_url, params=clean_params({"storeId": store_id}))
         req.raise_for_status()
         LOGGER.debug(req.text)
         return xmltodict.parse(req.text) if resp_format.lower() == "xml" else req.json()

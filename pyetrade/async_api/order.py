@@ -130,15 +130,15 @@ class ETradeOrder(object):
         # order.py original implementation did NOT store them in self.
         # Let's stick to original implementation of order.py for consistency unless it broke something?
         # Wait, if I need them later? I don't think so.
-    
+
     # Fix: AsyncOAuth1Client init call in my code above uses 'client_key' etc which are arguments.
     # But wait, did I use self.client_key in accounts.py? Yes.
     # In order.py original, it used arguments directly.
     # I should verify my code block above.
-    
+
     # In __init__ above:
     # self.session = AsyncOAuth1Client(self.client_key, ...
-    # BUT I didn't assign self.client_key = client_key! taking args client_key. 
+    # BUT I didn't assign self.client_key = client_key! taking args client_key.
     # ERROR in my typed logic above: `self.client_key` usage without assignment.
     # I should use `client_key` (arg).
 
@@ -312,7 +312,7 @@ class ETradeOrder(object):
 
         if not all(param in kwargs for param in mandatory):
             raise OrderException
-        
+
         if kwargs["priceType"] == "STOP" and "stopPrice" not in kwargs:
             raise OrderException
         if kwargs["priceType"] == "LIMIT" and "limitPrice" not in kwargs:

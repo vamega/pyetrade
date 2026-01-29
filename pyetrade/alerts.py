@@ -2,6 +2,7 @@ import logging
 import xmltodict
 from authlib.integrations.httpx_client import OAuth1Client
 
+from .utils import clean_params
 # Set up logging
 LOGGER = logging.getLogger(__name__)
 
@@ -73,7 +74,7 @@ class ETradeAlerts(object):
             count = 300
 
         req = self.session.get(
-            api_url, params={"count": count, "direction": sort_order}
+            api_url, params=clean_params({"count": count, "direction": sort_order})
         )
 
         req.raise_for_status()
@@ -106,7 +107,7 @@ class ETradeAlerts(object):
 
         LOGGER.debug(api_url)
 
-        req = self.session.get(api_url, params={"htmlTags": html_tags})
+        req = self.session.get(api_url, params=clean_params({"htmlTags": html_tags}))
         req.raise_for_status()
 
         LOGGER.debug(req.text)

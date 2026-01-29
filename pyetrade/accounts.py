@@ -4,6 +4,7 @@ import xmltodict
 import httpx
 from authlib.integrations.httpx_client import OAuth1Client
 
+from .utils import clean_params
 LOGGER = logging.getLogger(__name__)
 
 
@@ -104,7 +105,7 @@ class ETradeAccounts(object):
 
         LOGGER.debug(api_url)
 
-        req = self.session.get(api_url, params=payload)
+        req = self.session.get(api_url, params=clean_params(payload))
         req.raise_for_status()
 
         LOGGER.debug(req.text)
@@ -180,7 +181,7 @@ class ETradeAccounts(object):
 
         LOGGER.debug(api_url)
 
-        req = self.session.get(api_url, params=payload)
+        req = self.session.get(api_url, params=clean_params(payload))
         req.raise_for_status()
 
         LOGGER.debug(req.text)
@@ -286,7 +287,7 @@ class ETradeAccounts(object):
 
         LOGGER.debug(api_url)
 
-        req = self.session.get(api_url, params=payload)
+        req = self.session.get(api_url, params=clean_params(payload))
         req.raise_for_status()
 
         LOGGER.debug(req.text)
@@ -332,7 +333,7 @@ class ETradeAccounts(object):
 
         LOGGER.debug(api_url)
 
-        req = self.session.get(api_url, params={"storeId": store_id})
+        req = self.session.get(api_url, params=clean_params({"storeId": store_id}))
         req.raise_for_status()
 
         LOGGER.debug(req.text)

@@ -3,6 +3,7 @@ import asyncio
 import xmltodict
 from authlib.integrations.httpx_client import AsyncOAuth1Client
 
+from ..utils import clean_params
 # Set up logging
 LOGGER = logging.getLogger(__name__)
 
@@ -48,7 +49,7 @@ class ETradeAlerts(object):
             params["count"] = count
         if sort_order and sort_order != "DESC":
             params["direction"] = sort_order
-        req = await self.session.get(api_url, params=params or None)
+        req = await self.session.get(api_url, params=clean_params(params))
         req.raise_for_status()
         LOGGER.debug(req.text)
         return xmltodict.parse(req.text) if resp_format.lower() == "xml" else req.json()
@@ -63,7 +64,7 @@ class ETradeAlerts(object):
         )
         LOGGER.debug(api_url)
         params = {"htmlTags": html_tags} if html_tags else None
-        req = await self.session.get(api_url, params=params)
+        req = await self.session.get(api_url, params=clean_params(params))
         req.raise_for_status()
         LOGGER.debug(req.text)
         return xmltodict.parse(req.text) if resp_format.lower() == "xml" else req.json()
