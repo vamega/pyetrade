@@ -392,16 +392,21 @@ class ETradeOrder(object):
         LOGGER.debug(api_url)
         LOGGER.debug("payload: %s", payload)
 
+        if isinstance(method, str):
+            method_name = method.upper()
+        else:
+            method_name = getattr(method, "__name__", "post").upper()
+
         if resp_format == "json":
             headers = {"Accept": "application/json"}
-            request = httpx.Request("POST", api_url, json=payload, headers=headers)
-            auth_request = httpx.Request("POST", api_url, json=payload, headers=headers)
+            request = httpx.Request(method_name, api_url, json=payload, headers=headers)
+            auth_request = httpx.Request(method_name, api_url, json=payload, headers=headers)
         else:
             headers = {"Content-Type": "application/xml"}
             payload = emit_xml(payload)
             LOGGER.debug("xml payload: %s", payload)
-            request = httpx.Request("POST", api_url, content=payload, headers=headers)
-            auth_request = httpx.Request("POST", api_url, content=payload, headers=headers)
+            request = httpx.Request(method_name, api_url, content=payload, headers=headers)
+            auth_request = httpx.Request(method_name, api_url, content=payload, headers=headers)
 
         try:
             body = request.content
@@ -455,7 +460,7 @@ class ETradeOrder(object):
         payload = self.build_order_payload("PreviewOrderRequest", **kwargs)
 
         resp_format = kwargs.get("resp_format", "xml")
-        return self.perform_request(self.session.put, api_url, payload, resp_format)
+        return self.perform_request(self.session.post, api_url, payload, resp_format)
 
     def preview_option_order(self, **kwargs) -> dict:
         """:description: Preview option order (single leg)."""
@@ -553,7 +558,7 @@ class ETradeOrder(object):
         payload = self.build_order_payload("PlaceOrderRequest", **kwargs)
 
         resp_format = kwargs.get("resp_format", "xml")
-        return self.perform_request(self.session.put, api_url, payload, resp_format)
+        return self.perform_request(self.session.post, api_url, payload, resp_format)
 
     def cancel_order(
         self, account_id_key: str, order_num: int, resp_format: str = "xml"

@@ -198,21 +198,22 @@ class ETradeOrder(object):
         return get_request_result(req, resp_format)
 
     async def perform_request(
-        self, method, api_url: str, payload: Union[dict, str], resp_format: str = "xml"
+        self, method: str, api_url: str, payload: Union[dict, str],
+        resp_format: Literal["json", "xml"] = "xml"
     ) -> dict:
         LOGGER.debug(api_url)
         LOGGER.debug("payload: %s", payload)
 
         if resp_format == "json":
             headers = {"Accept": "application/json", "Content-Type": "application/json"}
-            request = httpx.Request("POST", api_url, json=payload, headers=headers)
-            auth_request = httpx.Request("POST", api_url, json=payload, headers=headers)
+            request = httpx.Request(method_name, api_url, json=payload, headers=headers)
+            auth_request = httpx.Request(method_name, api_url, json=payload, headers=headers)
         else:
             headers = {"Content-Type": "application/xml"}
             payload = emit_xml(payload)
             LOGGER.debug("xml payload: %s", payload)
-            request = httpx.Request("POST", api_url, content=payload, headers=headers)
-            auth_request = httpx.Request("POST", api_url, content=payload, headers=headers)
+            request = httpx.Request(method_name, api_url, content=payload, headers=headers)
+            auth_request = httpx.Request(method_name, api_url, content=payload, headers=headers)
 
         try:
             body = request.content
@@ -237,7 +238,7 @@ class ETradeOrder(object):
         suffix = ".json" if resp_format == "json" else ""
         api_url = f'{self.base_url}/{kwargs["accountIdKey"]}/orders/preview{suffix}'
         payload = self.build_order_payload("PreviewOrderRequest", **kwargs)
-        return await self.perform_request(self.session.post, api_url, payload, resp_format)
+        return await self.perform_request(self.session.put, api_url, payload, resp_format)
 
     async def preview_option_order(self, **kwargs) -> dict:
         kwargs["securityType"] = "OPTN"
@@ -292,7 +293,7 @@ class ETradeOrder(object):
             ".json" if resp_format == "json" else "",
         )
         payload = {"CancelOrderRequest": {"orderId": order_num}}
-        return await self.perform_request(self.session.put, api_url, payload, resp_format)
+        return await self.perform_request(self.session.post, api_url, payload, resp_format)
 
     @staticmethod
     def check_order(**kwargs):
