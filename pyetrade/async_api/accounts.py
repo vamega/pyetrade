@@ -3,7 +3,7 @@ from datetime import datetime
 import asyncio
 import xmltodict
 import httpx
-from authlib.integrations.httpx_client import AsyncOAuth1Client
+from authlib.integrations.httpx_client import OAuth1Auth
 
 from ..utils import clean_params
 LOGGER = logging.getLogger(__name__)
@@ -24,13 +24,23 @@ class ETradeAccounts(object):
         self.resource_owner_key = resource_owner_key
         self.resource_owner_secret = resource_owner_secret
         self.base_url = f'https://{"apisb" if dev else "api"}.etrade.com/v1/accounts'
-        self.session = AsyncOAuth1Client(
+        self._auth = OAuth1Auth(
             self.client_key,
             self.client_secret,
             token=self.resource_owner_key,
             token_secret=self.resource_owner_secret,
             signature_method="HMAC-SHA1",
         )
+        self.session = httpx.AsyncClient()
+
+    async def _request(self, method: str, api_url: str, params: dict | None = None) -> httpx.Response:
+        request = httpx.Request(method, api_url, params=params)
+        auth_request = httpx.Request(method, api_url, params=params)
+        signed_request = next(self._auth.sync_auth_flow(auth_request))
+        auth_header = signed_request.headers.get("Authorization")
+        if auth_header:
+            request.headers["Authorization"] = auth_header
+        return await self.session.send(request)
 
     async def list_accounts(self, resp_format: str = "xml") -> dict:
         api_url = "%s/list%s" % (
@@ -38,7 +48,7 @@ class ETradeAccounts(object):
             ".json" if resp_format == "json" else ".xml",
         )
         LOGGER.debug(api_url)
-        req = await self.session.get(api_url)
+        req = await self._request("GET", api_url)
         req.raise_for_status()
         LOGGER.debug(req.text)
         return xmltodict.parse(req.text) if resp_format.lower() == "xml" else req.json()
@@ -61,7 +71,7 @@ class ETradeAccounts(object):
         if account_type:
             payload["accountType"] = account_type
         LOGGER.debug(api_url)
-        req = await self.session.get(api_url, params=clean_params(payload))
+        req = await self._request("GET", api_url, params=clean_params(payload))
         req.raise_for_status()
         LOGGER.debug(req.text)
         return xmltodict.parse(req.text) if resp_format.lower() == "xml" else req.json()
@@ -95,7 +105,7 @@ class ETradeAccounts(object):
             "view": view,
         }
         LOGGER.debug(api_url)
-        req = await self.session.get(api_url, params=clean_params(payload))
+        req = await self._request("GET", api_url, params=clean_params(payload))
         req.raise_for_status()
         LOGGER.debug(req.text)
         return xmltodict.parse(req.text) if resp_format.lower() == "xml" else req.json()
@@ -124,7 +134,7 @@ class ETradeAccounts(object):
             lot_position_id[0],
             ".json" if resp_format == "json" else "",
         )
-        req = await self.session.get(api_url)
+        req = await self._request("GET", api_url)
         req.raise_for_status()
         LOGGER.debug(req.text)
         return xmltodict.parse(req.text) if resp_format.lower() == "xml" else req.json()
@@ -152,7 +162,7 @@ class ETradeAccounts(object):
             "count": count,
         }
         LOGGER.debug(api_url)
-        req = await self.session.get(api_url, params=clean_params(payload))
+        req = await self._request("GET", api_url, params=clean_params(payload))
         req.raise_for_status()
         LOGGER.debug(req.text)
         if req.text == "":

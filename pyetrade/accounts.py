@@ -186,6 +186,9 @@ class ETradeAccounts(object):
 
         LOGGER.debug(req.text)
 
+        if req.text == '':
+            return {}
+
         return xmltodict.parse(req.text) if resp_format.lower() == "xml" else req.json()
 
     def get_portfolio_position_lot(
