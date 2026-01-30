@@ -5,7 +5,7 @@ multi-leg options orders (spreads, butterflies, iron condors, box spreads).
 
 Adapted from laravel-etrade's EtradeOrderBuilder pattern.
 """
-from typing import Optional, List, Dict, Any, Union
+from typing import Optional, List, Dict, Any, Union, Literal
 from datetime import date
 import logging
 
@@ -25,6 +25,7 @@ from .types import (
     PlaceOrderRequestDict,
     PreviewIdDict,
 )
+from .utils import validate_client_order_id
 
 LOGGER = logging.getLogger(__name__)
 
@@ -74,6 +75,8 @@ VALID_ORDER_ACTIONS = (
     "SELL_CLOSE",
     "EXCHANGE",
 )
+BuyAction = Literal["BUY_OPEN", "BUY_CLOSE"]
+SellAction = Literal["SELL_OPEN", "SELL_CLOSE"]
 VALID_SECURITY_TYPES = ("EQ", "OPTN", "MF", "MMF")
 
 
@@ -164,6 +167,10 @@ class OrderBuilder:
         Returns:
             Self for method chaining.
         """
+        try:
+            validate_client_order_id(client_order_id)
+        except ValueError as exc:
+            raise OrderBuilderError(str(exc)) from exc
         self._client_order_id = client_order_id
         return self
 
@@ -373,16 +380,18 @@ class OrderBuilder:
         self,
         strike_price: float,
         qty: int = 1,
+        order_action: Literal["BUY_OPEN", "BUY_CLOSE"] = "BUY_OPEN",
         symbol: Optional[str] = None,
         expiry_year: Optional[int] = None,
         expiry_month: Optional[int] = None,
         expiry_day: Optional[int] = None,
     ) -> "OrderBuilder":
-        """Add a long call option leg (BUY_OPEN).
+        """Add a long call option leg.
 
         Args:
             strike_price: Strike price of the call.
             qty: Number of contracts.
+            order_action: BUY_OPEN or BUY_CLOSE.
             symbol: Override default symbol.
             expiry_year: Override default expiry year.
             expiry_month: Override default expiry month.
@@ -391,9 +400,30 @@ class OrderBuilder:
         Returns:
             Self for method chaining.
         """
+        self._assert_valid_enum(order_action, VALID_ORDER_ACTIONS, "order_action")
         return self._add_option_leg(
-            "CALL", "BUY_OPEN", strike_price, qty,
+            "CALL", order_action, strike_price, qty,
             symbol, expiry_year, expiry_month, expiry_day
+        )
+
+    def add_long_call_close(
+        self,
+        strike_price: float,
+        qty: int = 1,
+        symbol: Optional[str] = None,
+        expiry_year: Optional[int] = None,
+        expiry_month: Optional[int] = None,
+        expiry_day: Optional[int] = None,
+    ) -> "OrderBuilder":
+        """Add a long call option leg (BUY_CLOSE)."""
+        return self.add_long_call(
+            strike_price,
+            qty,
+            order_action="BUY_CLOSE",
+            symbol=symbol,
+            expiry_year=expiry_year,
+            expiry_month=expiry_month,
+            expiry_day=expiry_day,
         )
 
     def add_short_call(
@@ -420,6 +450,21 @@ class OrderBuilder:
         """
         return self._add_option_leg(
             "CALL", "SELL_OPEN", strike_price, qty,
+            symbol, expiry_year, expiry_month, expiry_day
+        )
+
+    def add_short_call_close(
+        self,
+        strike_price: float,
+        qty: int = 1,
+        symbol: Optional[str] = None,
+        expiry_year: Optional[int] = None,
+        expiry_month: Optional[int] = None,
+        expiry_day: Optional[int] = None,
+    ) -> "OrderBuilder":
+        """Add a short call option leg (SELL_CLOSE)."""
+        return self._add_option_leg(
+            "CALL", "SELL_CLOSE", strike_price, qty,
             symbol, expiry_year, expiry_month, expiry_day
         )
 
@@ -450,6 +495,21 @@ class OrderBuilder:
             symbol, expiry_year, expiry_month, expiry_day
         )
 
+    def add_long_put_close(
+        self,
+        strike_price: float,
+        qty: int = 1,
+        symbol: Optional[str] = None,
+        expiry_year: Optional[int] = None,
+        expiry_month: Optional[int] = None,
+        expiry_day: Optional[int] = None,
+    ) -> "OrderBuilder":
+        """Add a long put option leg (BUY_CLOSE)."""
+        return self._add_option_leg(
+            "PUT", "BUY_CLOSE", strike_price, qty,
+            symbol, expiry_year, expiry_month, expiry_day
+        )
+
     def add_short_put(
         self,
         strike_price: float,
@@ -474,6 +534,21 @@ class OrderBuilder:
         """
         return self._add_option_leg(
             "PUT", "SELL_OPEN", strike_price, qty,
+            symbol, expiry_year, expiry_month, expiry_day
+        )
+
+    def add_short_put_close(
+        self,
+        strike_price: float,
+        qty: int = 1,
+        symbol: Optional[str] = None,
+        expiry_year: Optional[int] = None,
+        expiry_month: Optional[int] = None,
+        expiry_day: Optional[int] = None,
+    ) -> "OrderBuilder":
+        """Add a short put option leg (SELL_CLOSE)."""
+        return self._add_option_leg(
+            "PUT", "SELL_CLOSE", strike_price, qty,
             symbol, expiry_year, expiry_month, expiry_day
         )
 
@@ -536,7 +611,7 @@ class OrderBuilder:
         """
         if short_strike <= long_strike:
             raise OrderBuilderError("short_strike must be greater than long_strike for bull call spread")
-        self.order_type("SPREADS")
+        self.order_type("IRON_CONDOR")
         self.add_long_call(long_strike, qty)
         self.add_short_call(short_strike, qty)
         return self
@@ -647,63 +722,107 @@ class OrderBuilder:
             raise OrderBuilderError(
                 "Strikes must be in ascending order: put_long < put_short < call_short < call_long"
             )
-        self.order_type("IRON_CONDOR")
+        self.order_type("SPREADS")
         self.add_long_put(put_long_strike, qty)
         self.add_short_put(put_short_strike, qty)
         self.add_short_call(call_short_strike, qty)
         self.add_long_call(call_long_strike, qty)
         return self
 
-    def box_spread(
+    def box_spread_borrow(
         self,
-        lower_strike: float,
-        upper_strike: float,
+        lower_strike: int,
+        upper_strike: int,
+        price: float,
         qty: int = 1,
+        *,
+        low_call_action: SellAction = "SELL_OPEN",
+        low_put_action: BuyAction = "BUY_OPEN",
+        high_call_action: BuyAction = "BUY_OPEN",
+        high_put_action: SellAction = "SELL_OPEN",
     ) -> "OrderBuilder":
-        """Create a box spread (4-leg arbitrage strategy).
-
-        A box spread is commonly used on cash-settled index options like SPX
-        for financing purposes. It creates a synthetic loan.
+        """Create a short box spread (borrow).
 
         Structure:
-        - Long call at lower strike
-        - Short call at upper strike
-        - Long put at upper strike
-        - Short put at lower strike
-
-        The value at expiration equals (upper_strike - lower_strike) * 100 * qty.
+        - Sell call at lower strike
+        - Buy put at lower strike
+        - Buy call at upper strike
+        - Sell put at upper strike
 
         Args:
             lower_strike: Lower strike price for the box.
             upper_strike: Upper strike price for the box.
+            price: Net credit for the box.
             qty: Number of box spreads.
-
-        Returns:
-            Self for method chaining.
-
-        Example for SPX:
-            >>> builder = (OrderBuilder.for_account("acct123")
-            ...     .client_order_id("box-001")
-            ...     .with_symbol("SPX")
-            ...     .with_expiry(2024, 12, 20)
-            ...     .box_spread(4500.0, 4600.0)
-            ...     .net_debit(99.50)  # Borrow at ~0.5% implied rate
-            ...     .gfd())
         """
         if upper_strike <= lower_strike:
             raise OrderBuilderError("upper_strike must be greater than lower_strike for box spread")
+        self._assert_positive_float(price, "price")
 
-        # Box spread uses IRON_CONDOR order type in E*Trade API
         self.order_type("IRON_CONDOR")
+        # Call spread leg then put spread leg
+        if low_call_action == "SELL_OPEN":
+            self.add_short_call(lower_strike, qty)
+        else:
+            self.add_short_call_close(lower_strike, qty)
+        self.add_long_call(upper_strike, qty, order_action=high_call_action)
+        if low_put_action == "BUY_OPEN":
+            self.add_long_put(lower_strike, qty)
+        else:
+            self.add_long_put_close(lower_strike, qty)
+        if high_put_action == "SELL_OPEN":
+            self.add_short_put(upper_strike, qty)
+        else:
+            self.add_short_put_close(upper_strike, qty)
+        self.net_credit(price)
+        return self
 
-        # Bull call spread component
-        self.add_long_call(lower_strike, qty)
-        self.add_short_call(upper_strike, qty)
+    def box_spread_lend(
+        self,
+        lower_strike: int,
+        upper_strike: int,
+        price: float,
+        qty: int = 1,
+        *,
+        low_call_action: BuyAction = "BUY_OPEN",
+        low_put_action: SellAction = "SELL_OPEN",
+        high_call_action: SellAction = "SELL_OPEN",
+        high_put_action: BuyAction = "BUY_OPEN",
+    ) -> "OrderBuilder":
+        """Create a long box spread (lend).
 
-        # Bear put spread component
-        self.add_long_put(upper_strike, qty)
-        self.add_short_put(lower_strike, qty)
+        Structure:
+        - Buy call at lower strike
+        - Sell put at lower strike
+        - Sell call at upper strike
+        - Buy put at upper strike
 
+        Args:
+            lower_strike: Lower strike price for the box.
+            upper_strike: Upper strike price for the box.
+            price: Net debit for the box.
+            qty: Number of box spreads.
+        """
+        if upper_strike <= lower_strike:
+            raise OrderBuilderError("upper_strike must be greater than lower_strike for box spread")
+        self._assert_positive_float(price, "price")
+
+        self.order_type("IRON_CONDOR")
+        # Call spread leg then put spread leg
+        self.add_long_call(lower_strike, qty, order_action=low_call_action)
+        if high_call_action == "SELL_OPEN":
+            self.add_short_call(upper_strike, qty)
+        else:
+            self.add_short_call_close(upper_strike, qty)
+        if low_put_action == "SELL_OPEN":
+            self.add_short_put(lower_strike, qty)
+        else:
+            self.add_short_put_close(lower_strike, qty)
+        if high_put_action == "BUY_OPEN":
+            self.add_long_put(upper_strike, qty)
+        else:
+            self.add_long_put_close(upper_strike, qty)
+        self.net_debit(price)
         return self
 
     def call_butterfly(
