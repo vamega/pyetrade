@@ -1,7 +1,7 @@
 import logging
 import asyncio
 from datetime import datetime
-from typing import Union, Dict, Any, Optional, List
+from typing import Union, Dict, Any, Optional, List, Literal
 
 import dateutil.parser
 import xmltodict
