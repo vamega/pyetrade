@@ -63,11 +63,9 @@ class ETradeAccounts(object):
         api_url = "%s/%s/balance%s" % (
             self.base_url,
             account_id_key,
-            ".json" if resp_format == "json" else ".xml",
+            ".json" if resp_format == "json" else "",
         )
-        payload = {}
-        if real_time is not None and real_time is False:
-            payload["realTimeNAV"] = real_time
+        payload = {"realTimeNAV": real_time, "instType": "BROKERAGE"}
         if account_type:
             payload["accountType"] = account_type
         LOGGER.debug(api_url)
