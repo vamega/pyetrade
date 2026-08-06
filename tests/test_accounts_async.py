@@ -58,6 +58,27 @@ class TestETradeAccounts:
         assert result == response_data
 
     @respx.mock
+    async def test_get_portfolio_position_lot_by_id(self):
+        accounts = ETradeAccounts(
+            "key", "secret", "token", "token_secret", dev=True
+        )
+        response_data = {"PositionLotsResponse": {"PositionLot": [{
+            "positionId": 101,
+            "positionLotId": 202,
+            "remainingQty": 2,
+        }]}}
+        url = "https://apisb.etrade.com/v1/accounts/account-key/portfolio/101.json"
+        route = respx.get(url).mock(return_value=Response(200, json=response_data))
+
+        result = await accounts.get_portfolio_position_lot_by_id(
+            "account-key", 101, resp_format="json"
+        )
+
+        assert result == response_data
+        assert route.called
+        await accounts.session.aclose()
+
+    @respx.mock
     async def test_list_transactions(self):
         accounts = ETradeAccounts(
             "key", "secret", "token", "token_secret", dev=True

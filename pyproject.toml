@@ -1,6 +1,6 @@
 [project]
 name = "pyetrade"
-version = "2.1.1"
+version = "2.1.2"
 description = "eTrade API wrapper with async support"
 authors = [
     {name = "Jesse Cooper", email = "jesse_cooper@codeholics.com"}

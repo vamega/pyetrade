@@ -1,6 +1,7 @@
 import logging
 from datetime import datetime
 import asyncio
+from typing import Union
 import xmltodict
 import httpx
 from authlib.integrations.httpx_client import OAuth1Auth
@@ -111,6 +112,12 @@ class ETradeAccounts(object):
     async def get_portfolio_position_lot(
         self, symbol: str, account_id_key: str, resp_format: str = "xml"
     ) -> dict:
+        """Retrieve lots for the single position matching ``symbol``.
+
+        Prefer :meth:`get_portfolio_position_lot_by_id` when the caller has a
+        portfolio position ID.  A symbol may identify multiple positions,
+        particularly option legs on the same underlying.
+        """
         portfolio = await self.get_account_portfolio(
             account_id_key, lots_required=True, resp_format="json"
         )
@@ -125,11 +132,26 @@ class ETradeAccounts(object):
                 f'Symbol "{symbol}" could not be found. '
                 f"Please check your portfolio and symbol before trying again."
             )
-        LOGGER.debug(lot_position_id[0])
+        return await self.get_portfolio_position_lot_by_id(
+            account_id_key, lot_position_id[0], resp_format
+        )
+
+    async def get_portfolio_position_lot_by_id(
+        self, account_id_key: str, position_id: Union[str, int], resp_format: str = "xml"
+    ) -> dict:
+        """Retrieve lots for one portfolio position by its E*TRADE ID.
+
+        This is the unambiguous variant of
+        :meth:`get_portfolio_position_lot`.  ``positionId`` is returned by
+        :meth:`get_account_portfolio` for every position, including option
+        legs that share the same underlying symbol.
+        """
+
+        LOGGER.debug(position_id)
         api_url = "%s/%s/portfolio/%s%s" % (
             self.base_url,
             account_id_key,
-            lot_position_id[0],
+            position_id,
             ".json" if resp_format == "json" else "",
         )
         req = await self._request("GET", api_url)
