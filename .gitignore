@@ -66,8 +66,5 @@ target/
 # Manifest
 MANIFEST
 
-# UV
-uv.lock
-
 # Backup
 pyetrade-backup/

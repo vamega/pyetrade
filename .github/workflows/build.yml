@@ -7,6 +7,10 @@ on:
     branches: [ master ]
   workflow_call:
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
   test:
     runs-on: ${{ matrix.os }}
@@ -18,25 +22,32 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v7.0.1
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v7.0.0
         with:
           python-version: ${{ matrix.python-version }}
 
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v10.0.1
+        with:
+          version: "0.12.3"
+          python-version: ${{ matrix.python-version }}
+          enable-cache: true
+
       - name: Install dependencies
-        run: |
-          pip install codecov
-          make
-          make devel
-          make install
+        run: uv sync --all-extras --locked
 
       - name: Run tests
-        run: make test
+        run: uv run --locked pytest --cov=pyetrade --cov-report=xml tests
 
-      - name: Run docs build test
-        run: make -C docs/ html
+      - name: Build documentation
+        run: uv run --locked python -m sphinx -M html docs docs/_build
 
-      - name: upload coverage
-        uses: codecov/codecov-action@v2
+      - name: Upload coverage
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
+        uses: codecov/codecov-action@v7.0.0
+        with:
+          files: coverage.xml
+          use_oidc: true
