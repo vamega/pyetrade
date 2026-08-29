@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """pyetrade market unit tests
-   TODO:
-    * pyetrade.market fixture
+TODO:
+ * pyetrade.market fixture
 """
+
 import datetime as dt
 import unittest
 from unittest.mock import patch
@@ -19,9 +20,7 @@ class TestETradeMarket(unittest.TestCase):
         type: mock.MagicMock
         """
 
-        mark = market.ETradeMarket(
-            "abc123", "xyz123", "abctoken", "xyzsecret", dev=False
-        )
+        mark = market.ETradeMarket("abc123", "xyz123", "abctoken", "xyzsecret", dev=False)
 
         # Test __str__ response
         self.assertEqual(
@@ -52,9 +51,7 @@ class TestETradeMarket(unittest.TestCase):
         MockOAuthClient.return_value.get.return_value.text = XML_response
         MockOAuthClient.return_value.get.return_value.status_code = 200
 
-        mark = market.ETradeMarket(
-            "abc123", "xyz123", "abctoken", "xyzsecret", dev=False
-        )
+        mark = market.ETradeMarket("abc123", "xyz123", "abctoken", "xyzsecret", dev=False)
         # Test Get Quote returning python dict
         resp = mark.look_up_product("mmm")
         assert isinstance(resp, dict)
@@ -62,9 +59,7 @@ class TestETradeMarket(unittest.TestCase):
 
         # Set Mock returns for resp_format=json
         MockOAuthClient.return_value.get.return_value.json.return_value = response
-        mark = market.ETradeMarket(
-            "abc123", "xyz123", "abctoken", "xyzsecret", dev=False
-        )
+        mark = market.ETradeMarket("abc123", "xyz123", "abctoken", "xyzsecret", dev=False)
         # Test Get Quote returning python dict
         resp = mark.look_up_product("mmm", resp_format="json")
         assert isinstance(resp, dict)
@@ -106,9 +101,7 @@ class TestETradeMarket(unittest.TestCase):
         MockOAuthClient.return_value.get.return_value.json.return_value = response
         MockOAuthClient.return_value.get.return_value.status_code = 200
 
-        mark = market.ETradeMarket(
-            "abc123", "xyz123", "abctoken", "xyzsecret", dev=False
-        )
+        mark = market.ETradeMarket("abc123", "xyz123", "abctoken", "xyzsecret", dev=False)
 
         # Test XML return
         resp = mark.get_quote(["MMM"])
@@ -174,51 +167,35 @@ class TestETradeMarket(unittest.TestCase):
         MockOAuthClient.return_value.get.return_value.text = XML_response
         MockOAuthClient.return_value.get.return_value.status_code = 200
 
-        mark = market.ETradeMarket(
-            "abc123", "xyz123", "abctoken", "xyzsecret", dev=False
-        )
-        resp = mark.get_option_chains(
-            "AAPL", expiry_date=dt.date(2019, 2, 15), resp_format="xml"
-        )
+        mark = market.ETradeMarket("abc123", "xyz123", "abctoken", "xyzsecret", dev=False)
+        resp = mark.get_option_chains("AAPL", expiry_date=dt.date(2019, 2, 15), resp_format="xml")
         assert isinstance(resp, dict)
         assert MockOAuthClient.return_value.get.called
 
         # Set Mock returns for resp_format=xml and expiry_date=None
         MockOAuthClient.return_value.get.return_value.text = XML_response
-        mark = market.ETradeMarket(
-            "abc123", "xyz123", "abctoken", "xyzsecret", dev=False
-        )
+        mark = market.ETradeMarket("abc123", "xyz123", "abctoken", "xyzsecret", dev=False)
         resp = mark.get_option_chains("AAPL", expiry_date=None, resp_format="xml")
         assert isinstance(resp, dict)
         assert MockOAuthClient.return_value.get.called
 
         # Set Mock returns for resp_format=xml and dev=True
         MockOAuthClient.return_value.get.return_value.text = XML_response
-        mark = market.ETradeMarket(
-            "abc123", "xyz123", "abctoken", "xyzsecret", dev=True
-        )
-        resp = mark.get_option_chains(
-            "AAPL", expiry_date=dt.date(2019, 2, 15), resp_format="xml"
-        )
+        mark = market.ETradeMarket("abc123", "xyz123", "abctoken", "xyzsecret", dev=True)
+        resp = mark.get_option_chains("AAPL", expiry_date=dt.date(2019, 2, 15), resp_format="xml")
         assert isinstance(resp, dict)
         assert MockOAuthClient.return_value.get.called
 
         # Set Mock returns for resp_format=xml
         MockOAuthClient.return_value.get.return_value.json.return_value = response
-        mark = market.ETradeMarket(
-            "abc123", "xyz123", "abctoken", "xyzsecret", dev=True
-        )
-        resp = mark.get_option_chains(
-            "AAPL", expiry_date=dt.date(2019, 2, 15), resp_format="xml"
-        )
+        mark = market.ETradeMarket("abc123", "xyz123", "abctoken", "xyzsecret", dev=True)
+        resp = mark.get_option_chains("AAPL", expiry_date=dt.date(2019, 2, 15), resp_format="xml")
         assert isinstance(resp, dict)
         assert MockOAuthClient.return_value.get.called
 
         # Set Mock returns for resp_format=json
         MockOAuthClient.return_value.get.return_value.json.return_value = response
-        mark = market.ETradeMarket(
-            "abc123", "xyz123", "abctoken", "xyzsecret", dev=False
-        )
+        mark = market.ETradeMarket("abc123", "xyz123", "abctoken", "xyzsecret", dev=False)
         resp = mark.get_option_chains(
             "AAPL",
             expiry_date=dt.date(2019, 2, 15),
@@ -259,17 +236,13 @@ class TestETradeMarket(unittest.TestCase):
         MockOAuthClient.return_value.get.return_value.text = XML_response
         MockOAuthClient.return_value.get.return_value.status_code = 200
 
-        mark = market.ETradeMarket(
-            "abc123", "xyz123", "abctoken", "xyzsecret", dev=False
-        )
+        mark = market.ETradeMarket("abc123", "xyz123", "abctoken", "xyzsecret", dev=False)
         resp = mark.get_option_expire_date("AAPL", resp_format="xml")
         assert isinstance(resp, dict)
         assert MockOAuthClient.return_value.get.called
 
         MockOAuthClient.return_value.get.return_value.text = XML_response
-        mark = market.ETradeMarket(
-            "abc123", "xyz123", "abctoken", "xyzsecret", dev=True
-        )
+        mark = market.ETradeMarket("abc123", "xyz123", "abctoken", "xyzsecret", dev=True)
         resp = mark.get_option_expire_date("AAPL", resp_format="xml")
         assert isinstance(resp, dict)
         assert MockOAuthClient.return_value.get.called

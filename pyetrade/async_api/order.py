@@ -6,8 +6,8 @@ from typing import Union, Dict, Any, Optional, List, Literal
 import dateutil.parser
 import xmltodict
 from jxmlease import emit_xml
-import httpx
-from authlib.integrations.httpx_client import OAuth1Auth
+import httpx2
+from .._oauth1_client import OAuth1Auth
 
 LOGGER = logging.getLogger(__name__)
 
@@ -36,12 +36,13 @@ def to_decimal_str(price: float, round_down: bool) -> str:
 
 class RequestException(Exception):
     """:description: Exception raised when request to Etrade API returns an error"""
+
     def __init__(self, message: str, response: Optional[dict] = None) -> None:
         super().__init__(message)
         self.response = response
 
 
-def get_request_result(req: httpx.Response, resp_format: str = "xml") -> dict:
+def get_request_result(req: httpx2.Response, resp_format: str = "xml") -> dict:
     LOGGER.debug(req.text)
     raw_text = req.text or ""
 
@@ -79,9 +80,7 @@ def get_request_result(req: httpx.Response, resp_format: str = "xml") -> dict:
 
 
 # return Etrade internal option symbol: e.g. "PLTR--220218P00023000" ref:_test_option_symbol()
-def option_symbol(
-    symbol: str, call_put: str, expiry_date: str, strike_price: float
-) -> str:
+def option_symbol(symbol: str, call_put: str, expiry_date: str, strike_price: float) -> str:
     sym = symbol.strip().upper()
     symstr = sym + ("-" * (6 - len(sym)))
 
@@ -113,7 +112,7 @@ class OrderException(Exception):
 class ETradeOrder(object):
     """:description: Object to perform Orders Asynchronously"""
 
-    async def _log_request(self, request: httpx.Request) -> None:
+    async def _log_request(self, request: httpx2.Request) -> None:
         LOGGER.debug("Request: %s %s", request.method, request.url)
         LOGGER.debug("Request headers: %s", dict(request.headers))
 
@@ -136,7 +135,7 @@ class ETradeOrder(object):
             token_secret=resource_owner_secret,
             signature_method="HMAC-SHA1",
         )
-        self.session = httpx.AsyncClient(
+        self.session = httpx2.AsyncClient(
             timeout=timeout,
             event_hooks={"request": [self._log_request]},
         )
@@ -157,17 +156,16 @@ class ETradeOrder(object):
     ) -> dict:
         if symbols and len(symbols) >= 26:
             LOGGER.warning(
-                "list_orders asked for %d requests; only first 25 returned"
-                % len(symbols)
+                "list_orders asked for %d requests; only first 25 returned" % len(symbols)
             )
 
-        api_url = f"{self.base_url}/{account_id_key}/orders{'.json' if resp_format == 'json' else '.xml'}"
+        api_url = (
+            f"{self.base_url}/{account_id_key}/orders{'.json' if resp_format == 'json' else '.xml'}"
+        )
         LOGGER.debug(api_url)
 
         if count >= 101:
-            LOGGER.debug(
-                f"Count {count} is greater than the max allowable value (100), using 100."
-            )
+            LOGGER.debug(f"Count {count} is greater than the max allowable value (100), using 100.")
             count = 100
 
         payload = {}
@@ -198,22 +196,30 @@ class ETradeOrder(object):
         return get_request_result(req, resp_format)
 
     async def perform_request(
-        self, method: str, api_url: str, payload: Union[dict, str],
-        resp_format: Literal["json", "xml"] = "xml"
+        self,
+        method: str,
+        api_url: str,
+        payload: Union[dict, str],
+        resp_format: Literal["json", "xml"] = "xml",
     ) -> dict:
         LOGGER.debug(api_url)
         LOGGER.debug("payload: %s", payload)
 
+        if isinstance(method, str):
+            method_name = method.upper()
+        else:
+            method_name = getattr(method, "__name__", "post").upper()
+
         if resp_format == "json":
             headers = {"Accept": "application/json", "Content-Type": "application/json"}
-            request = httpx.Request(method_name, api_url, json=payload, headers=headers)
-            auth_request = httpx.Request(method_name, api_url, json=payload, headers=headers)
+            request = httpx2.Request(method_name, api_url, json=payload, headers=headers)
+            auth_request = httpx2.Request(method_name, api_url, json=payload, headers=headers)
         else:
             headers = {"Content-Type": "application/xml"}
             payload = emit_xml(payload)
             LOGGER.debug("xml payload: %s", payload)
-            request = httpx.Request(method_name, api_url, content=payload, headers=headers)
-            auth_request = httpx.Request(method_name, api_url, content=payload, headers=headers)
+            request = httpx2.Request(method_name, api_url, content=payload, headers=headers)
+            auth_request = httpx2.Request(method_name, api_url, content=payload, headers=headers)
 
         try:
             body = request.content
@@ -238,7 +244,7 @@ class ETradeOrder(object):
         suffix = ".json" if resp_format == "json" else ""
         api_url = f'{self.base_url}/{kwargs["accountIdKey"]}/orders/preview{suffix}'
         payload = self.build_order_payload("PreviewOrderRequest", **kwargs)
-        return await self.perform_request(self.session.put, api_url, payload, resp_format)
+        return await self.perform_request(self.session.post, api_url, payload, resp_format)
 
     async def preview_option_order(self, **kwargs) -> dict:
         kwargs["securityType"] = "OPTN"
@@ -251,9 +257,7 @@ class ETradeOrder(object):
         api_url = f"{self.base_url}/{account_id_key}/orders/preview{suffix}"
         return await self.perform_request(self.session.post, api_url, payload, resp_format)
 
-    async def place_order_builder(
-        self, builder, preview_ids, resp_format: str = "xml"
-    ) -> dict:
+    async def place_order_builder(self, builder, preview_ids, resp_format: str = "xml") -> dict:
         payload = builder.build_place_payload(preview_ids)
         account_id_key = builder.get_account_id_key()
         suffix = ".json" if resp_format == "json" else ""
@@ -293,7 +297,7 @@ class ETradeOrder(object):
             ".json" if resp_format == "json" else "",
         )
         payload = {"CancelOrderRequest": {"orderId": order_num}}
-        return await self.perform_request(self.session.post, api_url, payload, resp_format)
+        return await self.perform_request(self.session.put, api_url, payload, resp_format)
 
     @staticmethod
     def check_order(**kwargs):
@@ -314,6 +318,7 @@ class ETradeOrder(object):
         client_order_id = kwargs.get("clientOrderId", "")
         try:
             from ..utils import validate_client_order_id
+
             validate_client_order_id(client_order_id)
         except ValueError as exc:
             raise OrderException(str(exc)) from exc
@@ -345,9 +350,7 @@ class ETradeOrder(object):
         product = {"securityType": securityType, "symbol": kwargs["symbol"]}
 
         if securityType == "OPTN":
-            expiryDate = dateutil.parser.parse(
-                kwargs.pop("expiryDate")
-            )
+            expiryDate = dateutil.parser.parse(kwargs.pop("expiryDate"))
             product.update(
                 {
                     "expiryDay": expiryDate.day,

@@ -1,12 +1,12 @@
 """Authorization - ETrade Authorization API Calls
 
-   TODO:
-    * Catch events
+TODO:
+ * Catch events
 
 """
+
 import logging
-import httpx
-from authlib.integrations.httpx_client import OAuth1Client
+from ._oauth1_client import OAuth1Client
 
 # Set up logging
 LOGGER = logging.getLogger(__name__)
@@ -24,9 +24,7 @@ class ETradeOAuth(object):
     :EtradeRef: https://apisb.etrade.com/docs/api/authorization/request_token.html
     """
 
-    def __init__(
-        self, consumer_key: str, consumer_secret: str, callback_url: str = "oob"
-    ):
+    def __init__(self, consumer_key: str, consumer_secret: str, callback_url: str = "oob"):
         self.consumer_key = consumer_key
         self.consumer_secret = consumer_secret
         self.base_url_prod = r"https://api.etrade.com"
@@ -62,7 +60,7 @@ class ETradeOAuth(object):
         # store oauth_token
         # self.resource_owner_key = self.session.token["oauth_token"]
         self.resource_owner_key = self.session.token["oauth_token"]
-        
+
         # Manually constructing the URL as per previous implementation to ensure compatibility
         # though create_authorization_url usually handles this. E*Trade might have specific params?
         # The previous implementation did:
@@ -119,9 +117,7 @@ class ETradeAccessManager(object):
         self.resource_owner_key = resource_owner_key
         self.resource_owner_secret = resource_owner_secret
         self.renew_access_token_url = r"https://api.etrade.com/oauth/renew_access_token"
-        self.revoke_access_token_url = (
-            r"https://api.etrade.com/oauth/revoke_access_token"
-        )
+        self.revoke_access_token_url = r"https://api.etrade.com/oauth/revoke_access_token"
         self.session = OAuth1Client(
             self.client_key,
             self.client_secret,

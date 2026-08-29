@@ -3,6 +3,7 @@
 This module provides comprehensive type hints using Literals and TypedDicts
 for improved IDE autocomplete and type safety.
 """
+
 from typing import Literal, TypedDict, Optional, List, Union
 from datetime import datetime
 
@@ -146,8 +147,10 @@ AlertStatus = Literal["READ", "UNREAD", "DELETED"]
 # TypedDicts for API Request/Response Structures
 # ============================================================================
 
+
 class ProductDict(TypedDict, total=False):
     """Product information for an instrument."""
+
     symbol: str
     securityType: SecurityType
     callPut: CallPut
@@ -159,6 +162,7 @@ class ProductDict(TypedDict, total=False):
 
 class InstrumentDict(TypedDict, total=False):
     """Instrument (leg) in an order."""
+
     Product: ProductDict
     orderAction: OrderAction
     quantity: int
@@ -172,6 +176,7 @@ class InstrumentDict(TypedDict, total=False):
 
 class OrderDetailDict(TypedDict, total=False):
     """Order detail fields."""
+
     orderTerm: OrderTerm
     priceType: PriceType
     limitPrice: float
@@ -184,11 +189,13 @@ class OrderDetailDict(TypedDict, total=False):
 
 class PreviewIdDict(TypedDict):
     """Preview ID for placing orders."""
+
     previewId: int
 
 
 class PreviewOrderRequestDict(TypedDict, total=False):
     """Request structure for preview order."""
+
     orderType: OrderType
     clientOrderId: str
     Order: List[OrderDetailDict]
@@ -196,6 +203,7 @@ class PreviewOrderRequestDict(TypedDict, total=False):
 
 class PlaceOrderRequestDict(TypedDict, total=False):
     """Request structure for place order."""
+
     orderType: OrderType
     clientOrderId: str
     Order: List[OrderDetailDict]
@@ -204,6 +212,7 @@ class PlaceOrderRequestDict(TypedDict, total=False):
 
 class AccountDict(TypedDict, total=False):
     """Account information."""
+
     accountId: str
     accountIdKey: str
     accountMode: str
@@ -217,6 +226,7 @@ class AccountDict(TypedDict, total=False):
 
 class BalanceDict(TypedDict, total=False):
     """Account balance information."""
+
     accountId: str
     accountType: str
     optionLevel: str
@@ -242,6 +252,7 @@ class BalanceDict(TypedDict, total=False):
 
 class PositionDict(TypedDict, total=False):
     """Portfolio position."""
+
     positionId: int
     symbolDescription: str
     dateAcquired: int
@@ -263,6 +274,7 @@ class PositionDict(TypedDict, total=False):
 
 class QuoteDataDict(TypedDict, total=False):
     """Quote data for a symbol."""
+
     symbol: str
     dateTime: str
     quoteStatus: str
@@ -285,6 +297,7 @@ class QuoteDataDict(TypedDict, total=False):
 
 class OptionChainDict(TypedDict, total=False):
     """Option chain information."""
+
     timeStamp: int
     quoteType: str
     nearPrice: float
@@ -293,6 +306,7 @@ class OptionChainDict(TypedDict, total=False):
 
 class TransactionDict(TypedDict, total=False):
     """Transaction information."""
+
     transactionId: int
     accountId: str
     transactionDate: int
@@ -305,6 +319,7 @@ class TransactionDict(TypedDict, total=False):
 
 class AlertDict(TypedDict, total=False):
     """Alert information."""
+
     id: int
     createTime: int
     subject: str
@@ -316,6 +331,7 @@ class AlertDict(TypedDict, total=False):
 
 class MessageDict(TypedDict, total=False):
     """API message (warning/error)."""
+
     description: str
     code: int
     type: str
@@ -323,6 +339,7 @@ class MessageDict(TypedDict, total=False):
 
 class OrderResponseDict(TypedDict, total=False):
     """Order response structure."""
+
     orderType: OrderType
     totalOrderValue: float
     previewTime: int

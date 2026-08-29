@@ -1,12 +1,13 @@
 """Tests for ETradeMarket using fixtures."""
+
 import pytest
-import respx
-from httpx import Response
 from unittest.mock import patch, MagicMock
 
 from pyetrade.market import ETradeMarket
 from pyetrade.async_api.market import ETradeMarket as ETradeMarketAsync
 from tests.conftest import load_fixture
+
+pytestmark = pytest.mark.httpx2(assert_all_called=False)
 
 
 class TestETradeMarketWithFixtures:
@@ -16,7 +17,7 @@ class TestETradeMarketWithFixtures:
     def test_look_up_product_xml(self, MockOAuthClient):
         """Test look_up_product with XML fixture."""
         xml_response = load_fixture("LookupResponse.xml")
-        
+
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.text = xml_response
@@ -33,7 +34,7 @@ class TestETradeMarketWithFixtures:
     def test_get_quote_xml(self, MockOAuthClient):
         """Test get_quote with XML fixture."""
         xml_response = load_fixture("GetQuotesResponse.xml")
-        
+
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.text = xml_response
@@ -50,7 +51,7 @@ class TestETradeMarketWithFixtures:
     def test_get_quote_multiple_symbols_xml(self, MockOAuthClient):
         """Test get_quote with multiple symbols using XML fixture."""
         xml_response = load_fixture("GetQuotesMultiResponse.xml")
-        
+
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.text = xml_response
@@ -71,7 +72,7 @@ class TestETradeMarketWithFixtures:
     def test_get_option_chains_xml(self, MockOAuthClient):
         """Test get_option_chains with XML fixture."""
         xml_response = load_fixture("OptionChainResponse.xml")
-        
+
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.text = xml_response
@@ -88,7 +89,7 @@ class TestETradeMarketWithFixtures:
     def test_get_option_expire_date_xml(self, MockOAuthClient):
         """Test get_option_expire_date with XML fixture."""
         xml_response = load_fixture("OptionExpireDateResponse.xml")
-        
+
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.text = xml_response
@@ -106,26 +107,24 @@ class TestETradeMarketWithFixtures:
 class TestETradeMarketAsyncWithFixtures:
     """Test async ETradeMarket using real response fixtures."""
 
-    @respx.mock
-    async def test_look_up_product_xml(self):
+    async def test_look_up_product_xml(self, httpx2_mock):
         """Test async look_up_product with XML fixture."""
         xml_response = load_fixture("LookupResponse.xml")
-        
+
         url = "https://api.etrade.com/v1/market/lookup/google.xml"
-        respx.get(url).mock(return_value=Response(200, text=xml_response))
+        httpx2_mock.get(url).respond(200, text=xml_response)
 
         market = ETradeMarketAsync("key", "secret", "token", "token_secret", dev=False)
         result = await market.look_up_product("google", resp_format="xml")
 
         assert "LookupResponse" in result
 
-    @respx.mock
-    async def test_get_quote_xml(self):
+    async def test_get_quote_xml(self, httpx2_mock):
         """Test async get_quote with XML fixture."""
         xml_response = load_fixture("GetQuotesResponse.xml")
-        
+
         url = "https://api.etrade.com/v1/market/quote/AAPL.xml"
-        respx.get(url).mock(return_value=Response(200, text=xml_response))
+        httpx2_mock.get(url).respond(200, text=xml_response)
 
         market = ETradeMarketAsync("key", "secret", "token", "token_secret", dev=False)
         result = await market.get_quote(["AAPL"], resp_format="xml")

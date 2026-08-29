@@ -6,7 +6,7 @@
 [![Build Status](https://github.com/jessecooper/pyetrade/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/jessecooper/pyetrade/actions/workflows/build.yml/badge.svg?branch=master)
 [![codecov](https://codecov.io/gh/jessecooper/pyetrade/branch/master/graph/badge.svg)](https://codecov.io/gh/jessecooper/pyetrade)
 
-Python E-Trade API Wrapper with support for both **synchronous** and **asynchronous** operations using `httpx` and `authlib`.
+Python E-Trade API Wrapper with support for both **synchronous** and **asynchronous** operations using `httpx2` and `authlib`.
 
 ## Completed
 
@@ -63,8 +63,10 @@ Python E-Trade API Wrapper with support for both **synchronous** and **asynchron
 pip install pyetrade
 ```
 
+Python 3.10 or newer is required.
+
 **Dependencies:**
-- `httpx` - Modern HTTP client with sync and async support
+- `httpx2` - Modern HTTP client with sync and async support
 - `authlib` - OAuth 1.0a authentication
 - `xmltodict` - XML parsing
 - `jxmlease` - XML generation (for orders)

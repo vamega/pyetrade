@@ -1,4 +1,5 @@
 """Tests for OrderBuilder class."""
+
 import pytest
 from datetime import date
 
@@ -148,11 +149,7 @@ class TestAddLegs:
         assert leg["Product"]["callPut"] == "PUT"
 
     def test_add_equity(self):
-        builder = (
-            OrderBuilder.for_account("acct123")
-            .with_symbol("AAPL")
-            .add_equity("BUY", 100)
-        )
+        builder = OrderBuilder.for_account("acct123").with_symbol("AAPL").add_equity("BUY", 100)
         leg = builder._instruments[0]
         assert leg["orderAction"] == "BUY"
         assert leg["quantity"] == 100
@@ -190,11 +187,7 @@ class TestStrategies:
         assert builder._instruments[1]["Product"]["strikePrice"] == 455.0
 
     def test_bull_call_spread_invalid_strikes_raises(self):
-        builder = (
-            OrderBuilder.for_account("acct123")
-            .with_symbol("SPY")
-            .with_expiry(2024, 12, 20)
-        )
+        builder = OrderBuilder.for_account("acct123").with_symbol("SPY").with_expiry(2024, 12, 20)
         with pytest.raises(OrderBuilderError, match="short_strike must be greater"):
             builder.bull_call_spread(long_strike=455.0, short_strike=450.0)
 
@@ -226,11 +219,7 @@ class TestStrategies:
         assert len(builder._instruments) == 4
 
     def test_iron_condor_invalid_strikes_raises(self):
-        builder = (
-            OrderBuilder.for_account("acct123")
-            .with_symbol("SPY")
-            .with_expiry(2024, 12, 20)
-        )
+        builder = OrderBuilder.for_account("acct123").with_symbol("SPY").with_expiry(2024, 12, 20)
         with pytest.raises(OrderBuilderError, match="Strikes must be in ascending order"):
             # Invalid: put_short > call_short
             builder.iron_condor(
@@ -254,8 +243,10 @@ class TestStrategies:
 
         # Verify structure: long call at lower, short call at upper,
         # long put at upper, short put at lower
-        actions = [(i["orderAction"], i["Product"]["callPut"], i["Product"]["strikePrice"])
-                   for i in builder._instruments]
+        actions = [
+            (i["orderAction"], i["Product"]["callPut"], i["Product"]["strikePrice"])
+            for i in builder._instruments
+        ]
 
         assert ("BUY_OPEN", "CALL", 4500.0) in actions
         assert ("SELL_OPEN", "CALL", 4600.0) in actions
@@ -263,11 +254,7 @@ class TestStrategies:
         assert ("SELL_OPEN", "PUT", 4500.0) in actions
 
     def test_box_spread_invalid_strikes_raises(self):
-        builder = (
-            OrderBuilder.for_account("acct123")
-            .with_symbol("SPX")
-            .with_expiry(2024, 12, 20)
-        )
+        builder = OrderBuilder.for_account("acct123").with_symbol("SPX").with_expiry(2024, 12, 20)
         with pytest.raises(OrderBuilderError, match="upper_strike must be greater"):
             builder.box_spread(lower_strike=4600.0, upper_strike=4500.0)
 
@@ -358,11 +345,7 @@ class TestBuildRequest:
             builder.build_preview_request()
 
     def test_build_preview_request_missing_instruments_raises(self):
-        builder = (
-            OrderBuilder.for_account("acct123")
-            .order_type("OPTN")
-            .client_order_id("test-001")
-        )
+        builder = OrderBuilder.for_account("acct123").order_type("OPTN").client_order_id("test-001")
         with pytest.raises(OrderBuilderError, match="At least one instrument"):
             builder.build_preview_request()
 

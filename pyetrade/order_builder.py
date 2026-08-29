@@ -5,6 +5,7 @@ multi-leg options orders (spreads, butterflies, iron condors, box spreads).
 
 Adapted from laravel-etrade's EtradeOrderBuilder pattern.
 """
+
 from typing import Optional, List, Dict, Any, Union, Literal
 from datetime import date
 import logging
@@ -82,6 +83,7 @@ VALID_SECURITY_TYPES = ("EQ", "OPTN", "MF", "MMF")
 
 class OrderBuilderError(Exception):
     """Exception raised when order builder validation fails."""
+
     pass
 
 
@@ -402,8 +404,7 @@ class OrderBuilder:
         """
         self._assert_valid_enum(order_action, VALID_ORDER_ACTIONS, "order_action")
         return self._add_option_leg(
-            "CALL", order_action, strike_price, qty,
-            symbol, expiry_year, expiry_month, expiry_day
+            "CALL", order_action, strike_price, qty, symbol, expiry_year, expiry_month, expiry_day
         )
 
     def add_long_call_close(
@@ -449,8 +450,7 @@ class OrderBuilder:
             Self for method chaining.
         """
         return self._add_option_leg(
-            "CALL", "SELL_OPEN", strike_price, qty,
-            symbol, expiry_year, expiry_month, expiry_day
+            "CALL", "SELL_OPEN", strike_price, qty, symbol, expiry_year, expiry_month, expiry_day
         )
 
     def add_short_call_close(
@@ -464,8 +464,7 @@ class OrderBuilder:
     ) -> "OrderBuilder":
         """Add a short call option leg (SELL_CLOSE)."""
         return self._add_option_leg(
-            "CALL", "SELL_CLOSE", strike_price, qty,
-            symbol, expiry_year, expiry_month, expiry_day
+            "CALL", "SELL_CLOSE", strike_price, qty, symbol, expiry_year, expiry_month, expiry_day
         )
 
     def add_long_put(
@@ -491,8 +490,7 @@ class OrderBuilder:
             Self for method chaining.
         """
         return self._add_option_leg(
-            "PUT", "BUY_OPEN", strike_price, qty,
-            symbol, expiry_year, expiry_month, expiry_day
+            "PUT", "BUY_OPEN", strike_price, qty, symbol, expiry_year, expiry_month, expiry_day
         )
 
     def add_long_put_close(
@@ -506,8 +504,7 @@ class OrderBuilder:
     ) -> "OrderBuilder":
         """Add a long put option leg (BUY_CLOSE)."""
         return self._add_option_leg(
-            "PUT", "BUY_CLOSE", strike_price, qty,
-            symbol, expiry_year, expiry_month, expiry_day
+            "PUT", "BUY_CLOSE", strike_price, qty, symbol, expiry_year, expiry_month, expiry_day
         )
 
     def add_short_put(
@@ -533,8 +530,7 @@ class OrderBuilder:
             Self for method chaining.
         """
         return self._add_option_leg(
-            "PUT", "SELL_OPEN", strike_price, qty,
-            symbol, expiry_year, expiry_month, expiry_day
+            "PUT", "SELL_OPEN", strike_price, qty, symbol, expiry_year, expiry_month, expiry_day
         )
 
     def add_short_put_close(
@@ -548,8 +544,7 @@ class OrderBuilder:
     ) -> "OrderBuilder":
         """Add a short put option leg (SELL_CLOSE)."""
         return self._add_option_leg(
-            "PUT", "SELL_CLOSE", strike_price, qty,
-            symbol, expiry_year, expiry_month, expiry_day
+            "PUT", "SELL_CLOSE", strike_price, qty, symbol, expiry_year, expiry_month, expiry_day
         )
 
     def add_equity(
@@ -573,7 +568,9 @@ class OrderBuilder:
 
         sym = symbol or self._default_symbol
         if not sym:
-            raise OrderBuilderError("Symbol is required. Use with_symbol() or pass symbol parameter.")
+            raise OrderBuilderError(
+                "Symbol is required. Use with_symbol() or pass symbol parameter."
+            )
 
         instrument: InstrumentDict = {
             "orderAction": order_action,
@@ -610,8 +607,10 @@ class OrderBuilder:
             Self for method chaining.
         """
         if short_strike <= long_strike:
-            raise OrderBuilderError("short_strike must be greater than long_strike for bull call spread")
-        self.order_type("IRON_CONDOR")
+            raise OrderBuilderError(
+                "short_strike must be greater than long_strike for bull call spread"
+            )
+        self.order_type("SPREADS")
         self.add_long_call(long_strike, qty)
         self.add_short_call(short_strike, qty)
         return self
@@ -635,7 +634,9 @@ class OrderBuilder:
             Self for method chaining.
         """
         if long_strike <= short_strike:
-            raise OrderBuilderError("long_strike must be greater than short_strike for bear call spread")
+            raise OrderBuilderError(
+                "long_strike must be greater than short_strike for bear call spread"
+            )
         self.order_type("SPREADS")
         self.add_short_call(short_strike, qty)
         self.add_long_call(long_strike, qty)
@@ -660,7 +661,9 @@ class OrderBuilder:
             Self for method chaining.
         """
         if short_strike <= long_strike:
-            raise OrderBuilderError("short_strike must be greater than long_strike for bull put spread")
+            raise OrderBuilderError(
+                "short_strike must be greater than long_strike for bull put spread"
+            )
         self.order_type("SPREADS")
         self.add_short_put(short_strike, qty)
         self.add_long_put(long_strike, qty)
@@ -685,7 +688,9 @@ class OrderBuilder:
             Self for method chaining.
         """
         if long_strike <= short_strike:
-            raise OrderBuilderError("long_strike must be greater than short_strike for bear put spread")
+            raise OrderBuilderError(
+                "long_strike must be greater than short_strike for bear put spread"
+            )
         self.order_type("SPREADS")
         self.add_long_put(long_strike, qty)
         self.add_short_put(short_strike, qty)
@@ -722,7 +727,7 @@ class OrderBuilder:
             raise OrderBuilderError(
                 "Strikes must be in ascending order: put_long < put_short < call_short < call_long"
             )
-        self.order_type("SPREADS")
+        self.order_type("IRON_CONDOR")
         self.add_long_put(put_long_strike, qty)
         self.add_short_put(put_short_strike, qty)
         self.add_short_call(call_short_strike, qty)
@@ -823,6 +828,42 @@ class OrderBuilder:
         else:
             self.add_long_put_close(upper_strike, qty)
         self.net_debit(price)
+        return self
+
+    def box_spread(
+        self,
+        lower_strike: float,
+        upper_strike: float,
+        qty: int = 1,
+    ) -> "OrderBuilder":
+        """Create a long box spread (4-leg arbitrage strategy).
+
+        A box spread is commonly used on cash-settled index options like SPX
+        for financing purposes. It creates a synthetic loan.
+
+        Structure:
+        - Long call at lower strike
+        - Short call at upper strike
+        - Long put at upper strike
+        - Short put at lower strike
+
+        Args:
+            lower_strike: Lower strike price for the box.
+            upper_strike: Upper strike price for the box.
+            qty: Number of box spreads.
+
+        Returns:
+            Self for method chaining.
+        """
+        if upper_strike <= lower_strike:
+            raise OrderBuilderError("upper_strike must be greater than lower_strike for box spread")
+
+        # Box spread uses IRON_CONDOR order type in E*Trade API.
+        self.order_type("IRON_CONDOR")
+        self.add_long_call(lower_strike, qty)
+        self.add_short_call(upper_strike, qty)
+        self.add_long_put(upper_strike, qty)
+        self.add_short_put(lower_strike, qty)
         return self
 
     def call_butterfly(
@@ -1024,9 +1065,13 @@ class OrderBuilder:
         day = expiry_day or self._default_expiry_day
 
         if not sym:
-            raise OrderBuilderError("Symbol is required. Use with_symbol() or pass symbol parameter.")
+            raise OrderBuilderError(
+                "Symbol is required. Use with_symbol() or pass symbol parameter."
+            )
         if year is None or month is None or day is None:
-            raise OrderBuilderError("Expiry date is required. Use with_expiry() or pass expiry parameters.")
+            raise OrderBuilderError(
+                "Expiry date is required. Use with_expiry() or pass expiry parameters."
+            )
 
         self._assert_valid_expiry_date(year, month, day)
 
@@ -1050,9 +1095,7 @@ class OrderBuilder:
     def _assert_valid_enum(self, value: str, allowed: tuple, field: str) -> None:
         """Validate that a value is in the allowed set."""
         if value not in allowed:
-            raise OrderBuilderError(
-                f"{field} must be one of: {', '.join(allowed)}"
-            )
+            raise OrderBuilderError(f"{field} must be one of: {', '.join(allowed)}")
 
     def _assert_valid_expiry_date(self, year: int, month: int, day: int) -> None:
         """Validate expiry date is valid."""
@@ -1076,7 +1119,9 @@ class OrderBuilder:
         if not self._account_id_key:
             raise OrderBuilderError("account_id_key is required. Use for_account().")
         if not self._order_type:
-            raise OrderBuilderError("order_type is required. Use order_type() or a strategy helper.")
+            raise OrderBuilderError(
+                "order_type is required. Use order_type() or a strategy helper."
+            )
         if not self._client_order_id:
             raise OrderBuilderError("client_order_id is required. Use client_order_id().")
         if not self._instruments:

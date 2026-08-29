@@ -1,6 +1,5 @@
 import logging
-import httpx
-from authlib.integrations.httpx_client import AsyncOAuth1Client
+from .._oauth1_client import AsyncOAuth1Client
 
 # Set up logging
 LOGGER = logging.getLogger(__name__)
@@ -18,9 +17,7 @@ class ETradeOAuth(object):
     :EtradeRef: https://apisb.etrade.com/docs/api/authorization/request_token.html
     """
 
-    def __init__(
-        self, consumer_key: str, consumer_secret: str, callback_url: str = "oob"
-    ):
+    def __init__(self, consumer_key: str, consumer_secret: str, callback_url: str = "oob"):
         self.consumer_key = consumer_key
         self.consumer_secret = consumer_secret
         self.base_url_prod = r"https://api.etrade.com"
@@ -57,7 +54,7 @@ class ETradeOAuth(object):
         authorization_url = self.session.create_authorization_url(self.auth_token_url)
         # store oauth_token
         self.resource_owner_key = self.session.token["oauth_token"]
-        
+
         formated_auth_url = "%s?key=%s&token=%s" % (
             self.auth_token_url,
             self.consumer_key,
@@ -111,9 +108,7 @@ class ETradeAccessManager(object):
         self.resource_owner_key = resource_owner_key
         self.resource_owner_secret = resource_owner_secret
         self.renew_access_token_url = r"https://api.etrade.com/oauth/renew_access_token"
-        self.revoke_access_token_url = (
-            r"https://api.etrade.com/oauth/revoke_access_token"
-        )
+        self.revoke_access_token_url = r"https://api.etrade.com/oauth/revoke_access_token"
         self.session = AsyncOAuth1Client(
             self.client_key,
             self.client_secret,

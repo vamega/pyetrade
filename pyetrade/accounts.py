@@ -1,10 +1,10 @@
 import logging
 from datetime import datetime
 import xmltodict
-import httpx
-from authlib.integrations.httpx_client import OAuth1Client
+from ._oauth1_client import OAuth1Client
 
 from .utils import clean_params
+
 LOGGER = logging.getLogger(__name__)
 
 
@@ -186,7 +186,7 @@ class ETradeAccounts(object):
 
         LOGGER.debug(req.text)
 
-        if req.text == '':
+        if req.text == "":
             return {}
 
         return xmltodict.parse(req.text) if resp_format.lower() == "xml" else req.json()

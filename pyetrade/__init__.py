@@ -1,4 +1,5 @@
 """Init for pyetrade module"""
+
 __version__ = "2.2.0"
 
 from . import authorization  # noqa: F401

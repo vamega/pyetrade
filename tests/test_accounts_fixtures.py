@@ -1,12 +1,13 @@
 """Tests for ETradeAccounts using fixtures."""
+
 import pytest
-import respx
-from httpx import Response
 from unittest.mock import patch, MagicMock
 
 from pyetrade.accounts import ETradeAccounts
 from pyetrade.async_api.accounts import ETradeAccounts as ETradeAccountsAsync
 from tests.conftest import load_fixture
+
+pytestmark = pytest.mark.httpx2(assert_all_called=False)
 
 
 class TestETradeAccountsWithFixtures:
@@ -16,7 +17,7 @@ class TestETradeAccountsWithFixtures:
     def test_list_accounts_xml(self, MockOAuthClient):
         """Test list_accounts with XML fixture."""
         xml_response = load_fixture("AccountListResponse.xml")
-        
+
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.text = xml_response
@@ -38,7 +39,7 @@ class TestETradeAccountsWithFixtures:
     def test_get_account_balance_xml(self, MockOAuthClient):
         """Test get_account_balance with XML fixture."""
         xml_response = load_fixture("GetAccountBalanceResponse.xml")
-        
+
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.text = xml_response
@@ -58,7 +59,7 @@ class TestETradeAccountsWithFixtures:
     def test_list_transactions_xml(self, MockOAuthClient):
         """Test list_transactions with XML fixture."""
         xml_response = load_fixture("ListTransactionsResponse.xml")
-        
+
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.text = xml_response
@@ -77,7 +78,7 @@ class TestETradeAccountsWithFixtures:
     def test_list_transaction_details_xml(self, MockOAuthClient):
         """Test list_transaction_details with XML fixture."""
         xml_response = load_fixture("ListTransactionDetailsResponse.xml")
-        
+
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.text = xml_response
@@ -94,7 +95,7 @@ class TestETradeAccountsWithFixtures:
     def test_get_account_portfolio_xml(self, MockOAuthClient):
         """Test get_account_portfolio with XML fixture."""
         xml_response = load_fixture("ViewPortfolioResponse.xml")
-        
+
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.text = xml_response
@@ -112,13 +113,12 @@ class TestETradeAccountsWithFixtures:
 class TestETradeAccountsAsyncWithFixtures:
     """Test async ETradeAccounts using real response fixtures."""
 
-    @respx.mock
-    async def test_list_accounts_xml(self):
+    async def test_list_accounts_xml(self, httpx2_mock):
         """Test async list_accounts with XML fixture."""
         xml_response = load_fixture("AccountListResponse.xml")
-        
+
         url = "https://api.etrade.com/v1/accounts/list.xml"
-        respx.get(url).mock(return_value=Response(200, text=xml_response))
+        httpx2_mock.get(url).respond(200, text=xml_response)
 
         accounts = ETradeAccountsAsync("key", "secret", "token", "token_secret", dev=False)
         result = await accounts.list_accounts(resp_format="xml")
@@ -128,13 +128,12 @@ class TestETradeAccountsAsyncWithFixtures:
         assert len(account_list) == 2
         assert account_list[0]["accountId"] == "840104290"
 
-    @respx.mock
-    async def test_get_account_balance_xml(self):
+    async def test_get_account_balance_xml(self, httpx2_mock):
         """Test async get_account_balance with XML fixture."""
         xml_response = load_fixture("GetAccountBalanceResponse.xml")
-        
-        url = "https://api.etrade.com/v1/accounts/test_key/balance.xml"
-        respx.get(url).mock(return_value=Response(200, text=xml_response))
+
+        url = "https://api.etrade.com/v1/accounts/test_key/balance"
+        httpx2_mock.get(url).respond(200, text=xml_response)
 
         accounts = ETradeAccountsAsync("key", "secret", "token", "token_secret", dev=False)
         result = await accounts.get_account_balance("test_key", resp_format="xml")

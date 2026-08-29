@@ -2,10 +2,12 @@ import logging
 from datetime import datetime
 import asyncio
 import xmltodict
-from authlib.integrations.httpx_client import AsyncOAuth1Client
+from .._oauth1_client import AsyncOAuth1Client
 
 from ..utils import clean_params
+
 LOGGER = logging.getLogger(__name__)
+
 
 class ETradeMarket(object):
     """:description: Async Market object to access market information"""
@@ -54,9 +56,7 @@ class ETradeMarket(object):
         if detail_flag is not None:
             detail_flag = detail_flag.lower()
         if len(symbols) >= 26:
-            LOGGER.warning(
-                "get_quote asked for %d requests; only first 25 returned" % len(symbols)
-            )
+            LOGGER.warning("get_quote asked for %d requests; only first 25 returned" % len(symbols))
         args = list()
         if detail_flag is not None:
             args.append("detailflag=%s" % detail_flag.upper())
@@ -129,9 +129,7 @@ class ETradeMarket(object):
     async def get_option_expire_date(self, symbol: str, resp_format: str = "xml") -> dict:
         api_url = "%s%s" % (
             self.base_url,
-            "optionexpiredate"
-            if resp_format.lower() == "xml"
-            else "optionexpiredate.json",
+            "optionexpiredate" if resp_format.lower() == "xml" else "optionexpiredate.json",
         )
         LOGGER.debug(api_url)
         req = await self.session.get(

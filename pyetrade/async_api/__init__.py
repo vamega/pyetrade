@@ -1,7 +1,7 @@
 """Async API for PyETrade.
 
 This package provides async versions of all PyETrade API classes
-using httpx and authlib for async HTTP requests.
+using httpx2 and authlib for async HTTP requests.
 
 Usage:
     from pyetrade.async_api.accounts import ETradeAccounts

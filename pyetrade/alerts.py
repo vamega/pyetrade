@@ -1,8 +1,9 @@
 import logging
 import xmltodict
-from authlib.integrations.httpx_client import OAuth1Client
+from ._oauth1_client import OAuth1Client
 
 from .utils import clean_params
+
 # Set up logging
 LOGGER = logging.getLogger(__name__)
 
@@ -68,9 +69,7 @@ class ETradeAlerts(object):
         LOGGER.debug(api_url)
 
         if count >= 301:
-            LOGGER.debug(
-                f"Count {count} is greater than the max allowable value (300), using 300"
-            )
+            LOGGER.debug(f"Count {count} is greater than the max allowable value (300), using 300")
             count = 300
 
         req = self.session.get(

@@ -3,11 +3,13 @@ from datetime import datetime
 import asyncio
 from typing import Union
 import xmltodict
-import httpx
-from authlib.integrations.httpx_client import OAuth1Auth
+import httpx2
+from .._oauth1_client import OAuth1Auth
 
 from ..utils import clean_params
+
 LOGGER = logging.getLogger(__name__)
+
 
 class ETradeAccounts(object):
     """:description: Async Accounts object to access account information"""
@@ -32,11 +34,13 @@ class ETradeAccounts(object):
             token_secret=self.resource_owner_secret,
             signature_method="HMAC-SHA1",
         )
-        self.session = httpx.AsyncClient()
+        self.session = httpx2.AsyncClient()
 
-    async def _request(self, method: str, api_url: str, params: dict | None = None) -> httpx.Response:
-        request = httpx.Request(method, api_url, params=params)
-        auth_request = httpx.Request(method, api_url, params=params)
+    async def _request(
+        self, method: str, api_url: str, params: dict | None = None
+    ) -> httpx2.Response:
+        request = httpx2.Request(method, api_url, params=params)
+        auth_request = httpx2.Request(method, api_url, params=params)
         signed_request = next(self._auth.sync_auth_flow(auth_request))
         auth_header = signed_request.headers.get("Authorization")
         if auth_header:

@@ -5,10 +5,11 @@ from typing import Union, Dict, Any, Optional, List, Literal
 import dateutil.parser
 import xmltodict
 from jxmlease import emit_xml
-from authlib.integrations.httpx_client import OAuth1Auth
-import httpx
+from ._oauth1_client import OAuth1Auth
+import httpx2
 
 from .utils import clean_params, validate_client_order_id
+
 LOGGER = logging.getLogger(__name__)
 
 # some constants
@@ -16,6 +17,7 @@ CALL = "Call"
 PUT = "Put"
 
 T_MARKET_SESSION = Literal["REGULAR", "EXTENDED"]
+
 
 def to_decimal_str(price: float, round_down: bool) -> str:
     spstr = "%.2f" % price  # round to 2-place decimal
@@ -37,12 +39,13 @@ def to_decimal_str(price: float, round_down: bool) -> str:
 
 class RequestException(Exception):
     """:description: Exception raised when request to Etrade API returns an error"""
+
     def __init__(self, message: str, response: Optional[dict] = None) -> None:
         super().__init__(message)
         self.response = response
 
 
-def get_request_result(req: httpx.Response, resp_format: str = "xml") -> dict:
+def get_request_result(req: httpx2.Response, resp_format: str = "xml") -> dict:
     LOGGER.debug(req.text)
     raw_text = req.text or ""
 
@@ -80,9 +83,7 @@ def get_request_result(req: httpx.Response, resp_format: str = "xml") -> dict:
 
 
 # return Etrade internal option symbol: e.g. "PLTR--220218P00023000" ref:_test_option_symbol()
-def option_symbol(
-    symbol: str, call_put: str, expiry_date: str, strike_price: float
-) -> str:
+def option_symbol(symbol: str, call_put: str, expiry_date: str, strike_price: float) -> str:
     sym = symbol.strip().upper()
     symstr = sym + ("-" * (6 - len(sym)))
 
@@ -149,12 +150,12 @@ class ETradeOrder(object):
             token_secret=resource_owner_secret,
             signature_method="HMAC-SHA1",
         )
-        self.session = httpx.Client(
+        self.session = httpx2.Client(
             timeout=timeout,
             event_hooks={"request": [self._log_request]},
         )
 
-    def _log_request(self, request: httpx.Request) -> None:
+    def _log_request(self, request: httpx2.Request) -> None:
         LOGGER.debug("Request: %s %s", request.method, request.url)
         LOGGER.debug("Request headers: %s", dict(request.headers))
         body = request.content
@@ -172,12 +173,24 @@ class ETradeOrder(object):
         account_id_key: str,
         marker: str = None,
         count: int = 25,
-        status: Optional[Literal["OPEN", "EXECUTED", "CANCELLED", "INDIVIDUAL_FILLS", "CANCEL_REQUESTED", "EXPIRED", "REJECTED"]] = None,
+        status: Optional[
+            Literal[
+                "OPEN",
+                "EXECUTED",
+                "CANCELLED",
+                "INDIVIDUAL_FILLS",
+                "CANCEL_REQUESTED",
+                "EXPIRED",
+                "REJECTED",
+            ]
+        ] = None,
         from_date: datetime = None,
         to_date: datetime = None,
         symbols: list[str] = None,
         security_type: Optional[Literal["EQ", "OPTN", "MF", "MMF"]] = None,
-        transaction_type: Optional[Literal["ATNM", "BUY", "SELL", "SELL_SHORT", "BUY_TO_COVER", "MF_EXCHANGE"]] = None,
+        transaction_type: Optional[
+            Literal["ATNM", "BUY", "SELL", "SELL_SHORT", "BUY_TO_COVER", "MF_EXCHANGE"]
+        ] = None,
         market_session: T_MARKET_SESSION = "REGULAR",
         resp_format: Literal["json", "xml"] = "json",
     ) -> dict:
@@ -187,17 +200,16 @@ class ETradeOrder(object):
 
         if symbols and len(symbols) >= 26:
             LOGGER.warning(
-                "list_orders asked for %d requests; only first 25 returned"
-                % len(symbols)
+                "list_orders asked for %d requests; only first 25 returned" % len(symbols)
             )
 
-        api_url = f"{self.base_url}/{account_id_key}/orders{'.json' if resp_format == 'json' else ''}"
+        api_url = (
+            f"{self.base_url}/{account_id_key}/orders{'.json' if resp_format == 'json' else ''}"
+        )
         LOGGER.debug(api_url)
 
         if count >= 101:
-            LOGGER.debug(
-                f"Count {count} is greater than the max allowable value (100), using 100."
-            )
+            LOGGER.debug(f"Count {count} is greater than the max allowable value (100), using 100.")
             count = 100
 
         payload = {
@@ -219,9 +231,7 @@ class ETradeOrder(object):
 
         return get_request_result(req, resp_format)
 
-    def list_order_details(
-        self, account_id_key: str, order_id: int, resp_format: str = "json"
-    ):
+    def list_order_details(self, account_id_key: str, order_id: int, resp_format: str = "json"):
         """
         :description: Lists order details of a specific account ID Key and order ID
         ... (docstring omitted for brevity) ...
@@ -261,9 +271,7 @@ class ETradeOrder(object):
                 product = o["OrderDetail"][0]["Instrument"][0]["Product"]
 
                 if product["securityType"] == "OPTN":
-                    symbol = product["productId"][
-                        "symbol"
-                    ]  # e.g. "PLTR--220218P00023000"
+                    symbol = product["productId"]["symbol"]  # e.g. "PLTR--220218P00023000"
 
                     if symbol == opt_sym:
                         results.append(o)
@@ -399,14 +407,14 @@ class ETradeOrder(object):
 
         if resp_format == "json":
             headers = {"Accept": "application/json"}
-            request = httpx.Request(method_name, api_url, json=payload, headers=headers)
-            auth_request = httpx.Request(method_name, api_url, json=payload, headers=headers)
+            request = httpx2.Request(method_name, api_url, json=payload, headers=headers)
+            auth_request = httpx2.Request(method_name, api_url, json=payload, headers=headers)
         else:
             headers = {"Content-Type": "application/xml"}
             payload = emit_xml(payload)
             LOGGER.debug("xml payload: %s", payload)
-            request = httpx.Request(method_name, api_url, content=payload, headers=headers)
-            auth_request = httpx.Request(method_name, api_url, content=payload, headers=headers)
+            request = httpx2.Request(method_name, api_url, content=payload, headers=headers)
+            auth_request = httpx2.Request(method_name, api_url, content=payload, headers=headers)
 
         try:
             body = request.content
@@ -442,9 +450,7 @@ class ETradeOrder(object):
 
         return self.perform_request(self.session.post, api_url, payload, resp_format)
 
-    def change_preview_equity_order(
-        self, account_id_key: str, order_id: str, **kwargs
-    ) -> dict:
+    def change_preview_equity_order(self, account_id_key: str, order_id: str, **kwargs) -> dict:
         """:description: Same as :class:`preview_equity_order` with orderId
         ... (docstring omitted for brevity) ...
         """
@@ -475,9 +481,7 @@ class ETradeOrder(object):
         api_url = f"{self.base_url}/{account_id_key}/orders/preview{suffix}"
         return self.perform_request(self.session.post, api_url, payload, resp_format)
 
-    def place_order_builder(
-        self, builder, preview_ids, resp_format: str = "xml"
-    ) -> dict:
+    def place_order_builder(self, builder, preview_ids, resp_format: str = "xml") -> dict:
         """Place an order built with OrderBuilder."""
         payload = builder.build_place_payload(preview_ids)
         account_id_key = builder.get_account_id_key()
@@ -504,9 +508,7 @@ class ETradeOrder(object):
             preview = self.preview_equity_order(**kwargs)
             kwargs["previewId"] = self._extract_preview_id(preview)
 
-            LOGGER.debug(
-                "Got a successful preview with previewId: %s", kwargs["previewId"]
-            )
+            LOGGER.debug("Got a successful preview with previewId: %s", kwargs["previewId"])
 
         resp_format = kwargs.get("resp_format", "xml")
         suffix = ".json" if resp_format == "json" else ""
@@ -548,11 +550,11 @@ class ETradeOrder(object):
                 raise Exception("Please check your order!")
 
             kwargs["previewId"] = self._extract_preview_id(preview)
-            LOGGER.debug(
-                "Got a successful preview with previewId: %s", kwargs["previewId"]
-            )
+            LOGGER.debug("Got a successful preview with previewId: %s", kwargs["previewId"])
 
-        api_url = f'{self.base_url}/{kwargs["accountIdKey"]}/orders/{kwargs["orderId"]}/change/place'
+        api_url = (
+            f'{self.base_url}/{kwargs["accountIdKey"]}/orders/{kwargs["orderId"]}/change/place'
+        )
 
         # payload creation
         payload = self.build_order_payload("PlaceOrderRequest", **kwargs)
@@ -560,9 +562,7 @@ class ETradeOrder(object):
         resp_format = kwargs.get("resp_format", "xml")
         return self.perform_request(self.session.post, api_url, payload, resp_format)
 
-    def cancel_order(
-        self, account_id_key: str, order_num: int, resp_format: str = "xml"
-    ) -> dict:
+    def cancel_order(self, account_id_key: str, order_num: int, resp_format: str = "xml") -> dict:
         """:description: Cancels a specific order for a given account
         ... (docstring omitted for brevity) ...
         """
